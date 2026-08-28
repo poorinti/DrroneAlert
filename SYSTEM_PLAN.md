@@ -6,24 +6,26 @@
 
 ---
 
-## 1) Tech Stack ที่ล็อกใช้ใน MVP
+## 1) Tech Stack ที่ใช้จริงในเวอร์ชันปัจจุบัน
 
 - Backend: Node.js + Express.js
-- Frontend: HTML + Bootstrap 5 + Vanilla JavaScript
+- Dashboard เจ้าหน้าที่: React + TypeScript + Vite + Tailwind CSS + Radix UI + Framer Motion
+- แบบฟอร์มผู้แจ้ง: HTML + Bootstrap 5 + Vanilla JavaScript
 - Database: MySQL 8
 - Database Admin: phpMyAdmin
 - Real-time: Socket.IO
-- Map: Leaflet + OpenStreetMap
-- LINE Integration: LINE LIFF SDK
+- Map Dashboard: React Leaflet + OpenStreetMap
+- Map แบบฟอร์มผู้แจ้ง: Leaflet + OpenStreetMap
+- LINE Integration: LINE LIFF SDK (เตรียมไว้ ยังไม่เปิดใช้จริงจนกว่าจะใส่ credentials)
 - Upload Storage: Local Docker Volume `/uploads`
 - Login: Session + Secure Cookie
 - Reverse Proxy / HTTPS: Caddy
 - Deployment: Docker Compose
 
-### สิ่งที่ยังไม่ใช้ใน MVP
+### สิ่งที่ยังไม่ใช้ในเวอร์ชันปัจจุบัน
 
 - ไม่ใช้ Bot / LINE Messaging workflow
-- ไม่ใช้ React / Next.js
+- ไม่ใช้ Next.js, Vue หรือ Redux
 - ไม่ใช้ Redis
 - ไม่ใช้ PostgreSQL / PostGIS
 - ไม่ใช้ MinIO / S3 ในช่วงแรก
@@ -745,6 +747,14 @@ Mobile-first
 - Card ไม่เยอะเกินไป
 - Notification เฉพาะเหตุใหม่/ระดับสูง
 - รองรับจอ Desktop เป็นหลัก
+
+### Workflow เหตุการณ์และการแจ้งเตือน (Implemented)
+
+- Navbar รองรับโลโก้หลักและโลโก้รอง ซึ่ง Super Admin อัปโหลดแยกกันจาก Settings ได้
+- Light/Dark mode เก็บค่าตามเบราว์เซอร์ด้วย `localStorage`
+- `report_reads(report_id, user_id, read_at)` เก็บสถานะอ่านเป็นรายผู้ใช้ กระดิ่งจะแสดงเฉพาะเหตุที่ยังไม่อ่าน
+- รายการหลักและหมุดแผนที่แสดงสถานะ `NEW`, `ACKNOWLEDGED`, `INVESTIGATING`, `VERIFIED`
+- เมื่อเลือก “ดำเนินการเสร็จสิ้น” เหตุจะเป็น `RESOLVED` และย้ายไปที่เมนู “เหตุการณ์ย้อนหลัง” ซึ่งรวม `FALSE_ALARM`, `RESOLVED`, `CLOSED`
 
 ---
 

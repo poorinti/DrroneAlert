@@ -11,4 +11,7 @@ export const getMe = () => fetch('/api/auth/me').then((r) => r.json()) as Promis
 export const getStats = () => api<Stats>('/api/admin/stats');
 export const getSettings = () => api<Settings>('/api/admin/settings');
 export const getReports = (query: URLSearchParams) => api<ReportSummary[]>(`/api/admin/reports?${query}`);
+export const markRead = (id: number) => api<{ ok: boolean }>(`/api/admin/reports/${id}/read`, { method: 'POST' });
+export const markAllRead = () => api<{ ok: boolean }>('/api/admin/reports/read-all', { method: 'POST' });
+export const getNotifications = () => api<{ unread_count: number; reports: ReportSummary[] }>('/api/admin/notifications');
 export const getReport = (id: number) => api<DetailResponse>(`/api/admin/reports/${id}`);

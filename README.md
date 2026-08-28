@@ -1,41 +1,63 @@
-# DroneAlert
+# D DRONE
 
-ระบบแจ้งเหตุพบโดรนหรืออากาศยานผ่าน LINE LIFF / Web Form และ Dashboard แผนที่แบบ Real-time
+ระบบรับแจ้งเหตุโดรนและอากาศยานสำหรับทดสอบและใช้งานภายใน โดยรับรายงานจาก Web Form/LINE LIFF และให้เจ้าหน้าที่ติดตามเหตุผ่านแผนที่แบบเรียลไทม์
 
-## Stack
+## สถาปัตยกรรมปัจจุบัน
 
-- Node.js + Express
-- MySQL 8
-- phpMyAdmin
-- Socket.IO
-- Leaflet + OpenStreetMap
-- Bootstrap + Vanilla JavaScript
-- LINE LIFF
-- Caddy
-- Docker Compose
+- Dashboard เจ้าหน้าที่: React + TypeScript + Vite + Tailwind + Radix UI + Framer Motion + React Leaflet + Socket.IO Client
+- แบบฟอร์มผู้แจ้ง: HTML + Bootstrap 5 + Vanilla JavaScript + Leaflet
+- Backend: Node.js + Express + MySQL 8 + Express Session + Socket.IO
+- Deployment: Docker Compose + Caddy + phpMyAdmin + Docker Volume สำหรับ `/uploads`
+- LINE: เตรียม LIFF แล้ว แต่ยังไม่รวมการตั้งค่า LINE จริงในโปรเจกต์นี้
 
-## เริ่มต้นแบบ Local
+## ความสามารถของ Dashboard
 
-1. Copy `.env.example` เป็น `.env`
-2. เปลี่ยน password / secret ใน `.env`
-3. รัน `docker compose up -d --build`
-4. สร้างบัญชี admin ครั้งแรก:
-   `docker compose exec app npm run create-admin -- admin <รหัสผ่านที่ต้องการ>`
+- แสดงโลโก้หลักและโลโก้รองได้ พร้อมให้ Super Admin เปลี่ยนจากหน้า Settings
+- สลับ Light/Dark mode โดยจดจำโหมดไว้ในเบราว์เซอร์เครื่องนั้น
+- กระดิ่งแจ้งเตือนข่าวใหม่แบบรายผู้ใช้ และแสดงจุดสีน้ำเงินสำหรับเหตุที่ยังไม่อ่าน
+- หน้าเริ่มต้นแสดงเฉพาะเหตุที่กำลังดำเนินการ (`NEW`, `ACKNOWLEDGED`, `INVESTIGATING`, `VERIFIED`)
+- ปุ่ม “ดำเนินการเสร็จสิ้น” เปลี่ยนเหตุเป็น `RESOLVED` และย้ายออกจากแผนที่/รายการปัจจุบันไปยังเมนู “เหตุการณ์ย้อนหลัง”
+
+## เริ่มใช้งานในเครื่อง
+
+1. คัดลอก `.env.example` เป็น `.env` และตั้งค่า secret/password ให้เหมาะสม
+2. สร้างและเปิดบริการ
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. สร้างบัญชีผู้ดูแล (ค่าเดโมปัจจุบันคือ `admin / admin1234`)
+
+   ```bash
+   docker compose exec app npm run create-admin -- admin admin1234
+   ```
+
+4. สร้างข้อมูล DEMO/TEST ประมาณ 20 เหตุการณ์ โดยไม่ลบข้อมูลเดิม
+
+   ```bash
+   docker compose exec app npm run seed-demo
+   ```
+
+   สคริปต์จะไม่เพิ่มข้อมูลซ้ำ หากพบรายงานที่ขึ้นต้นด้วย `DEMO-` อยู่แล้ว และสร้างข้อมูลสถานะอ่าน/ยังไม่อ่านสำหรับทดสอบบนฐานข้อมูลใหม่
 
 ## URLs
 
-- `http://localhost/report/` แบบฟอร์มแจ้งเหตุ
-- `http://localhost/login/` Login เจ้าหน้าที่
-- `http://localhost/dashboard/` Dashboard
-- `http://localhost/api/health` Health check
-- phpMyAdmin: `http://127.0.0.1:8082` จากเครื่อง Server เท่านั้นในค่าเริ่มต้น
+- [แบบฟอร์มแจ้งเหตุ](http://localhost/report/)
+- [เข้าสู่ระบบเจ้าหน้าที่](http://localhost/login/)
+- [Dashboard ศูนย์บัญชาการ](http://localhost/dashboard/)
+- [Health check](http://localhost/api/health)
+- phpMyAdmin: `http://127.0.0.1:8082` (เข้าถึงได้จากเครื่อง Server เท่านั้นตามค่าเริ่มต้น)
 
-## Production
+## คำสั่งตรวจสอบ
 
-- ตั้งค่า `SITE_ADDRESS=drone.example.com` ใน `.env` แล้วชี้ DNS มาที่ Server
-- ใช้ HTTPS ผ่าน Caddy
-- เปลี่ยน `SESSION_SECRET`, DB password และรหัส admin ทุกค่า
-- ไม่เปิด phpMyAdmin สู่ Internet โดยตรง
-- รูปหลักฐานอยู่ใน Docker volume และเข้าดูผ่าน session ของเจ้าหน้าที่
+```bash
+npm run check
+npm run build:frontend
+docker compose config --quiet
+docker compose up -d --build
+```
 
-อ่านรายละเอียดทั้งหมดที่ `SYSTEM_PLAN.md`
+## ขอบเขตที่ยังรอ LINE จริง
+
+ต้องกำหนด `LINE_LIFF_ID` และ `LINE_CHANNEL_ID` ใน `.env` แล้วทดสอบจาก LINE บนอุปกรณ์จริงภายหลัง ระบบข้อมูลเดโมอาจมี `LINE_LIFF` เพื่อใช้ทดสอบหน้าจอเท่านั้น ไม่ได้เชื่อมบัญชี LINE จริง

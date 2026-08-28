@@ -10,6 +10,7 @@ const reportsRouter = require('./routes/reports');
 const authRouter = require('./routes/auth');
 const lineRouter = require('./routes/line');
 const adminRouter = require('./routes/admin');
+const brandingRouter = require('./routes/branding');
 const { requireAuth } = require('./middleware/auth');
 
 const app = express();
@@ -48,6 +49,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true, service: 'DroneAlert' 
 app.use('/api/reports', reportsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/line', lineRouter);
+app.use('/api/branding', brandingRouter);
 app.use('/api/admin', adminRouter);
 
 io.engine.use(sessionMiddleware);

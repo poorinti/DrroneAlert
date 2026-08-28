@@ -56,6 +56,15 @@
     box.classList.remove('d-none');
   }
 
+  async function initBranding() {
+    const branding = await fetch('/api/branding').then((r) => r.json()).catch(() => ({}));
+    const title = branding.app_title || 'D DRONE';
+    const organization = branding.organization_name || 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน';
+    document.getElementById('reportBrandTitle').textContent = title;
+    document.getElementById('reportOrganization').textContent = organization;
+    document.title = `${title} · แจ้งเหตุ`;
+  }
+
   function setNow() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -301,5 +310,6 @@
   setReporterTypeUI();
   setObjectTypeUI();
   initMap();
+  initBranding();
   initLineIdentity().catch((error) => console.warn('LINE LIFF init skipped:', error.message));
 })();

@@ -15,6 +15,7 @@ const allowedLogoTypes = new Map([
   ['image/png', '.png'], ['image/jpeg', '.jpg'], ['image/webp', '.webp'], ['image/gif', '.gif']
 ]);
 let settingsTableReady;
+let reportReadsTableReady;
 
 function ensureSettingsTable() {
   if (!settingsTableReady) {
@@ -27,55 +28,79 @@ function ensureSettingsTable() {
   return settingsTableReady;
 }
 
+function ensureReportReadsTable() {
+  if (!reportReadsTableReady) {
+    reportReadsTableReady = pool.query(`CREATE TABLE IF NOT EXISTS report_reads (
+      report_id BIGINT UNSIGNED NOT NULL,
+      user_id BIGINT UNSIGNED NOT NULL,
+      read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (report_id, user_id),
+      CONSTRAINT fk_report_reads_report FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+      CONSTRAINT fk_report_reads_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB`).catch((error) => { reportReadsTableReady = null; throw error; });
+  }
+  return reportReadsTableReady;
+}
+
 const brandingUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => { fs.mkdirSync(brandingDir, { recursive: true }); cb(null, brandingDir); },
     filename: (req, file, cb) => cb(null, `logo-${crypto.randomUUID()}${allowedLogoTypes.get(file.mimetype) || ''}`)
   }),
-  limits: { files: 1, fileSize: 2 * 1024 * 1024 },
+  limits: { files: 2, fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => allowedLogoTypes.has(file.mimetype) ? cb(null, true) : cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'logo'))
 });
 
 router.get('/settings', async (req, res, next) => {
   try {
     await ensureSettingsTable();
-    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','app_logo_path')");
-    const settings = { app_title: 'D DRONE', app_logo_path: '' };
+    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path')");
+    const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '' };
     for (const row of rows) settings[row.setting_key] = row.setting_value || '';
     res.json(settings);
   } catch (error) { next(error); }
 });
 
-router.post('/settings', requireRole('SUPER_ADMIN'), brandingUpload.single('logo'), async (req, res, next) => {
+router.post('/settings', requireRole('SUPER_ADMIN'), brandingUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'secondaryLogo', maxCount: 1 }]), async (req, res, next) => {
   try {
     await ensureSettingsTable();
     const appTitle = String(req.body.appTitle || '').trim();
-    if (!appTitle || appTitle.length > 100) {
-      if (req.file) fs.unlink(req.file.path, () => {});
-      return res.status(400).json({ error: 'กรุณาระบุชื่อโครงการไม่เกิน 100 ตัวอักษร' });
+    const organizationName = String(req.body.organizationName || '').trim();
+    if (!appTitle || appTitle.length > 100 || organizationName.length > 160) {
+      for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
+      return res.status(400).json({ error: 'กรุณาระบุชื่อโครงการไม่เกิน 100 ตัวอักษร และชื่อหน่วยงานไม่เกิน 160 ตัวอักษร' });
     }
-    const relativeLogoPath = req.file ? path.relative(uploadRoot, req.file.path).split(path.sep).join('/') : null;
+    const primaryFile = req.files?.logo?.[0];
+    const secondaryFile = req.files?.secondaryLogo?.[0];
+    const relativeLogoPath = primaryFile ? path.relative(uploadRoot, primaryFile.path).split(path.sep).join('/') : null;
+    const relativeSecondaryLogoPath = secondaryFile ? path.relative(uploadRoot, secondaryFile.path).split(path.sep).join('/') : null;
     await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('app_title', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [appTitle]);
+    await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('organization_name', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [organizationName]);
     if (relativeLogoPath) await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('app_logo_path', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [relativeLogoPath]);
+    if (relativeSecondaryLogoPath) await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('secondary_logo_path', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [relativeSecondaryLogoPath]);
     await pool.execute(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, user_agent) VALUES (?, 'BRANDING_UPDATED', 'APP_SETTINGS', 'branding', ?, ?)`, [req.session.user.id, req.ip, req.get('user-agent') || null]);
-    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','app_logo_path')");
-    const settings = { app_title: 'D DRONE', app_logo_path: '' };
+    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path')");
+    const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '' };
     for (const row of rows) settings[row.setting_key] = row.setting_value || '';
     res.json(settings);
   } catch (error) {
-    if (req.file) fs.unlink(req.file.path, () => {});
+    for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
     next(error);
   }
 });
 
 router.get('/reports', async (req, res, next) => {
   try {
+    await ensureReportReadsTable();
     const status = req.query.status || null;
     const severity = req.query.severity || null;
     const search = String(req.query.search || '').trim();
+    const scope = req.query.scope === 'history' ? 'history' : 'active';
 
     const where = [];
     const params = [];
+    if (scope === 'active') where.push("r.status IN ('NEW','ACKNOWLEDGED','INVESTIGATING','VERIFIED')");
+    else where.push("r.status IN ('FALSE_ALARM','RESOLVED','CLOSED')");
     if (status) { where.push('r.status = ?'); params.push(status); }
     if (severity) { where.push('COALESCE(r.operator_severity, r.reporter_severity) = ?'); params.push(severity); }
     if (search) {
@@ -93,13 +118,15 @@ router.get('/reports', async (req, res, next) => {
               r.submitted_at, rp.reporter_type, rp.line_display_name, rp.name AS reporter_name,
               rp.organization,
               (SELECT file_path FROM report_images ri WHERE ri.report_id = r.id ORDER BY ri.sort_order, ri.id LIMIT 1) AS cover_image,
-              (SELECT COUNT(*) FROM report_images ri2 WHERE ri2.report_id = r.id) AS image_count
+              (SELECT COUNT(*) FROM report_images ri2 WHERE ri2.report_id = r.id) AS image_count,
+              CASE WHEN rr.report_id IS NULL THEN TRUE ELSE FALSE END AS is_unread
        FROM reports r
        LEFT JOIN reporters rp ON rp.id = r.reporter_id
+       LEFT JOIN report_reads rr ON rr.report_id = r.id AND rr.user_id = ?
        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
        ORDER BY r.submitted_at DESC
        LIMIT 500`,
-      params
+      [req.session.user.id, ...params]
     );
     res.json(rows);
   } catch (error) {
@@ -137,6 +164,35 @@ router.get('/reports/:id', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+router.post('/reports/:id/read', async (req, res, next) => {
+  try {
+    await ensureReportReadsTable();
+    await pool.execute('INSERT INTO report_reads (report_id, user_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE read_at = read_at', [req.params.id, req.session.user.id]);
+    res.json({ ok: true });
+  } catch (error) { next(error); }
+});
+
+router.post('/reports/read-all', async (req, res, next) => {
+  try {
+    await ensureReportReadsTable();
+    await pool.execute(`INSERT IGNORE INTO report_reads (report_id, user_id)
+      SELECT id, ? FROM reports WHERE status IN ('NEW','ACKNOWLEDGED','INVESTIGATING','VERIFIED')`, [req.session.user.id]);
+    res.json({ ok: true });
+  } catch (error) { next(error); }
+});
+
+router.get('/notifications', async (req, res, next) => {
+  try {
+    await ensureReportReadsTable();
+    const [rows] = await pool.execute(`SELECT r.id, r.report_no, r.location_name, r.submitted_at,
+      COALESCE(r.operator_severity, r.reporter_severity) AS effective_severity
+      FROM reports r LEFT JOIN report_reads rr ON rr.report_id = r.id AND rr.user_id = ?
+      WHERE rr.report_id IS NULL AND r.status IN ('NEW','ACKNOWLEDGED','INVESTIGATING','VERIFIED')
+      ORDER BY r.submitted_at DESC LIMIT 20`, [req.session.user.id]);
+    res.json({ unread_count: rows.length, reports: rows });
+  } catch (error) { next(error); }
 });
 
 router.patch('/reports/:id', requireRole('SUPER_ADMIN', 'OPERATOR'), async (req, res, next) => {
@@ -226,7 +282,7 @@ router.get('/stats', async (req, res, next) => {
 
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
-    if (req.file) fs.unlink(req.file.path, () => {});
+    for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
     if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'โลโก้ต้องมีขนาดไม่เกิน 2 MB' });
     return res.status(400).json({ error: 'รองรับโลโก้เฉพาะ PNG, JPG, WEBP หรือ GIF' });
   }

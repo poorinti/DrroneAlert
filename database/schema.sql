@@ -94,6 +94,15 @@ CREATE TABLE IF NOT EXISTS report_history (
   CONSTRAINT fk_history_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS report_reads (
+  report_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (report_id, user_id),
+  CONSTRAINT fk_report_reads_report FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+  CONSTRAINT fk_report_reads_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT UNSIGNED NULL,
@@ -115,5 +124,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
 INSERT INTO app_settings (setting_key, setting_value) VALUES
   ('app_title', 'D DRONE'),
-  ('app_logo_path', '')
+  ('organization_name', 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน'),
+  ('app_logo_path', ''),
+  ('secondary_logo_path', '')
 ON DUPLICATE KEY UPDATE setting_value = setting_value;
