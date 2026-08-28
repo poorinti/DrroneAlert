@@ -46,7 +46,7 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
       <div className="hidden h-10 w-10 place-items-center overflow-hidden rounded-[13px] border border-slate-200 bg-white text-xs font-bold text-slate-500 sm:grid">{secondaryLogo ? <img className="h-full w-full object-cover" src={secondaryLogo} alt="โลโก้หน่วยงาน" /> : 'หน่วย'}</div>
       <div className="hidden max-w-[180px] lg:block">
         <strong className="block truncate text-sm tracking-wide">{settings.app_title || 'D DRONE'}</strong>
-        <span className="block truncate text-[8px] tracking-[.04em] text-muted">{settings.organization_name || 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน'}</span>
+        <span className="block truncate text-[8px] font-semibold tracking-[.04em] text-slate-600">{settings.organization_name || 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน'}</span>
       </div>
     </div>
 

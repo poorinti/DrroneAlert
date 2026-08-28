@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Camera, MapPin, X } from 'lucide-react';
+import { Camera, ExternalLink, MapPin, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { actionLabels, objectLabels, reporterLabels, severityLabels, sourceLabels, statusLabels } from '../../lib/labels';
 import { formatDate } from '../../lib/utils';
@@ -45,6 +45,11 @@ export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote
   const report = data?.report;
   const canEdit = ['SUPER_ADMIN', 'OPERATOR'].includes(role);
   const images = data?.images || [];
+  const incidentLat = Number(report?.incident_lat);
+  const incidentLng = Number(report?.incident_lng);
+  const hasIncidentCoordinate = Number.isFinite(incidentLat) && Number.isFinite(incidentLng) && incidentLat >= -90 && incidentLat <= 90 && incidentLng >= -180 && incidentLng <= 180;
+  const incidentCoordinate = hasIncidentCoordinate ? `${incidentLat.toFixed(6)}, ${incidentLng.toFixed(6)}` : '-';
+  const incidentGoogleMapsUrl = hasIncidentCoordinate ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${incidentLat},${incidentLng}`)}` : '';
 
   async function save() {
     setSaving(true);
@@ -82,7 +87,7 @@ export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote
                 <Row label="สิ่งที่พบ" value={objectLabels[report.object_type]}/>
                 <Row label="สถานที่" value={<span className="inline-flex gap-1"><MapPin size={12} className="text-primary"/>{report.location_name}</span>}/>
                 <Row label="เวลาที่พบ" value={formatDate(report.occurred_at)}/>
-                <Row label="พิกัด" value={`${report.incident_lat}, ${report.incident_lng}`}/>
+                <Row label="พิกัด GPS" value={hasIncidentCoordinate ? <a href={incidentGoogleMapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 font-bold tabular-nums text-blue-700 transition hover:border-blue-300 hover:bg-blue-100" title="เปิดพิกัดนี้ใน Google Maps"><MapPin size={12} className="shrink-0"/>{incidentCoordinate}<ExternalLink size={11} className="shrink-0"/></a> : '-'}/>
                 <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-[11px] leading-relaxed">{report.description || report.appearance_notes || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
               </section>
 

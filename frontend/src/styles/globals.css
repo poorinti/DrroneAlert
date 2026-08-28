@@ -12,7 +12,7 @@
 @layer components {
   .glass { border: 1px solid rgba(255,255,255,.94); background: rgba(255,255,255,.96); box-shadow: 0 16px 44px rgba(15,23,42,.18); backdrop-filter: blur(22px) saturate(150%); }
   .live-dot { width: 8px; height: 8px; border-radius: 999px; background: #2caf70; box-shadow: 0 0 0 5px rgba(44,175,112,.13); animation: soft-pulse 2.2s infinite; }
-  .navbar-status-strip { max-width: 210px; border: 1px solid rgba(148,163,184,.16); border-radius: 12px; background: rgba(248,250,252,.72); padding: 6px 9px; }
+  .navbar-status-strip { max-width: 210px; border: 1px solid rgba(148,163,184,.32); border-radius: 12px; background: rgba(255,255,255,.98); padding: 6px 9px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
   .legend { display: inline-block; width: 7px; height: 7px; border-radius: 999px; margin-right: 4px; }
   .loading-dot { width: 12px; height: 12px; border-radius: 999px; background: #0878ff; box-shadow: 0 0 0 7px rgba(8,120,255,.12); animation: soft-pulse 1.5s infinite; }
   .detail-section { margin-top: 18px; border-top: 1px solid rgba(148,163,184,.22); padding-top: 17px; }
