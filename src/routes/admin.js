@@ -16,16 +16,29 @@ const brandingDir = path.join(uploadRoot, 'branding');
 const allowedLogoTypes = new Map([
   ['image/png', '.png'], ['image/jpeg', '.jpg'], ['image/webp', '.webp'], ['image/gif', '.gif']
 ]);
+const allowedSurfaceModes = new Set(['glass', 'white', 'custom']);
+const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(value);
 let settingsTableReady;
 let reportReadsTableReady;
 
 function ensureSettingsTable() {
   if (!settingsTableReady) {
-    settingsTableReady = pool.query(`CREATE TABLE IF NOT EXISTS app_settings (
-      setting_key VARCHAR(100) PRIMARY KEY,
-      setting_value TEXT NULL,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB`).catch((error) => { settingsTableReady = null; throw error; });
+    settingsTableReady = (async () => {
+      await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (
+        setting_key VARCHAR(100) PRIMARY KEY,
+        setting_value TEXT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB`);
+      await pool.execute(`INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES
+        ('app_title', 'D DRONE'),
+        ('organization_name', 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน'),
+        ('app_logo_path', ''),
+        ('secondary_logo_path', ''),
+        ('navbar_surface_mode', 'white'),
+        ('navbar_surface_color', '#dbeafe'),
+        ('panel_surface_mode', 'white'),
+        ('panel_surface_color', '#ffffff')`);
+    })().catch((error) => { settingsTableReady = null; throw error; });
   }
   return settingsTableReady;
 }
@@ -56,8 +69,8 @@ const brandingUpload = multer({
 router.get('/settings', async (req, res, next) => {
   try {
     await ensureSettingsTable();
-    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path')");
-    const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '' };
+    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path','navbar_surface_mode','navbar_surface_color','panel_surface_mode','panel_surface_color')");
+    const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '', navbar_surface_mode: 'white', navbar_surface_color: '#dbeafe', panel_surface_mode: 'white', panel_surface_color: '#ffffff' };
     for (const row of rows) settings[row.setting_key] = row.setting_value || '';
     res.json(settings);
   } catch (error) { next(error); }
@@ -68,9 +81,17 @@ router.post('/settings', requireRole('SUPER_ADMIN'), brandingUpload.fields([{ na
     await ensureSettingsTable();
     const appTitle = String(req.body.appTitle || '').trim();
     const organizationName = String(req.body.organizationName || '').trim();
+    const navbarSurfaceMode = String(req.body.navbarSurfaceMode || 'white').trim();
+    const navbarSurfaceColor = String(req.body.navbarSurfaceColor || '#dbeafe').trim().toLowerCase();
+    const panelSurfaceMode = String(req.body.panelSurfaceMode || 'white').trim();
+    const panelSurfaceColor = String(req.body.panelSurfaceColor || '#ffffff').trim().toLowerCase();
     if (!appTitle || appTitle.length > 100 || organizationName.length > 160) {
       for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
       return res.status(400).json({ error: 'กรุณาระบุชื่อโครงการไม่เกิน 100 ตัวอักษร และชื่อหน่วยงานไม่เกิน 160 ตัวอักษร' });
+    }
+    if (!allowedSurfaceModes.has(navbarSurfaceMode) || !allowedSurfaceModes.has(panelSurfaceMode) || !isHexColor(navbarSurfaceColor) || !isHexColor(panelSurfaceColor)) {
+      for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
+      return res.status(400).json({ error: 'รูปแบบสี Dashboard ไม่ถูกต้อง' });
     }
     const primaryFile = req.files?.logo?.[0];
     const secondaryFile = req.files?.secondaryLogo?.[0];
@@ -78,11 +99,15 @@ router.post('/settings', requireRole('SUPER_ADMIN'), brandingUpload.fields([{ na
     const relativeSecondaryLogoPath = secondaryFile ? path.relative(uploadRoot, secondaryFile.path).split(path.sep).join('/') : null;
     await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('app_title', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [appTitle]);
     await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('organization_name', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [organizationName]);
+    await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('navbar_surface_mode', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [navbarSurfaceMode]);
+    await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('navbar_surface_color', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [navbarSurfaceColor]);
+    await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('panel_surface_mode', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [panelSurfaceMode]);
+    await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('panel_surface_color', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [panelSurfaceColor]);
     if (relativeLogoPath) await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('app_logo_path', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [relativeLogoPath]);
     if (relativeSecondaryLogoPath) await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('secondary_logo_path', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [relativeSecondaryLogoPath]);
     await pool.execute(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, user_agent) VALUES (?, 'BRANDING_UPDATED', 'APP_SETTINGS', 'branding', ?, ?)`, [req.session.user.id, req.ip, req.get('user-agent') || null]);
-    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path')");
-    const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '' };
+    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path','navbar_surface_mode','navbar_surface_color','panel_surface_mode','panel_surface_color')");
+    const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '', navbar_surface_mode: 'white', navbar_surface_color: '#dbeafe', panel_surface_mode: 'white', panel_surface_color: '#ffffff' };
     for (const row of rows) settings[row.setting_key] = row.setting_value || '';
     res.json(settings);
   } catch (error) {

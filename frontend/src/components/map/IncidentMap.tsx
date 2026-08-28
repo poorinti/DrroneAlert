@@ -182,6 +182,18 @@ export function IncidentMap({ reports, selectedId, onSelect, mapStyle, inspectio
   const validReports = useMemo(() => reports.filter((report) => Number.isFinite(Number(report.incident_lat)) && Number.isFinite(Number(report.incident_lng))), [reports]);
   const activeStyle = mapStyles.find((style) => style.id === mapStyle) || mapStyles[0];
   const [drawingActive, setDrawingActive] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 680px)').matches);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 680px)');
+    const sync = () => {
+      setIsMobile(media.matches);
+      if (media.matches) setDrawingActive(false);
+    };
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
 
   return <div className="absolute inset-0">
     <MapContainer center={[15.87, 100.99]} zoom={6} zoomControl={false} className="absolute inset-0 h-full w-full" doubleClickZoom={false}>
@@ -206,7 +218,7 @@ export function IncidentMap({ reports, selectedId, onSelect, mapStyle, inspectio
         </Marker>;
       })}
       {inspection && <InspectionMarker inspection={inspection} onNotify={onNotify}/>}
-      <MapAnnotationTools onNotify={onNotify} onDrawingActiveChange={setDrawingActive}/>
+      {!isMobile && <MapAnnotationTools onNotify={onNotify} onDrawingActiveChange={setDrawingActive}/>}
     </MapContainer>
   </div>;
 }

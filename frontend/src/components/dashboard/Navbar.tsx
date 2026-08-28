@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { Bell, Check, FileDown, Layers3, LoaderCircle, LocateFixed, LogOut, Plus, RefreshCw, Search, Settings, UserRound } from 'lucide-react';
+import { Bell, Check, FileDown, Layers3, LoaderCircle, LocateFixed, LogOut, MoreHorizontal, Plus, RefreshCw, Search, Settings, UserRound } from 'lucide-react';
 import { brandingAssetUrl } from '../../lib/branding';
 import { mapStyles, type MapStyleId } from '../../lib/mapStyles';
 import { severityLabels } from '../../lib/labels';
@@ -17,7 +17,7 @@ function IconTip({ label, children }: { label: string; children: React.ReactNode
 
 const severityOf = (report: ReportSummary) => report.effective_severity || report.operator_severity || report.reporter_severity || 'MEDIUM';
 
-export function Navbar({ user, settings, search, searchLoading, liveCoordinate, unread, mapStyle, onSearch, onSearchSubmit, onRefresh, onSettings, onPassword, onLogout, onExport, onMapStyle, onNotification, onReadAll }: {
+export function Navbar({ user, settings, search, searchLoading, liveCoordinate, unread, mapStyle, onSearch, onSearchSubmit, onRefresh, onSettings, onPassword, onLogout, onExport, onMapStyle, onNotification, onReadAll, onMobilePanel }: {
   user: User;
   settings: AppSettings;
   search: string;
@@ -35,18 +35,23 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
   onMapStyle: (value: MapStyleId) => void;
   onNotification: (report: ReportSummary) => void;
   onReadAll: () => void;
+  onMobilePanel: () => void;
 }) {
   const primaryLogo = brandingAssetUrl(settings.app_logo_path);
   const secondaryLogo = brandingAssetUrl(settings.secondary_logo_path);
   const coordinateText = liveCoordinate ? `${liveCoordinate.lat.toFixed(6)}, ${liveCoordinate.lng.toFixed(6)}` : '--, --';
 
-  return <><header className="glass fixed left-3 right-3 top-3 z-[900] flex h-[66px] items-center gap-2 rounded-[21px] px-2.5 sm:left-4 sm:right-4 sm:gap-3 sm:px-3 lg:gap-4">
+  return <><header className="glass dashboard-navbar-surface fixed left-3 right-3 top-3 z-[900] flex h-[66px] items-center gap-2 rounded-[21px] px-2.5 sm:left-4 sm:right-4 sm:gap-3 sm:px-3 lg:gap-4">
     <div className="flex min-w-fit items-center gap-2">
       <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-[13px] bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-bold text-white">{primaryLogo ? <img className="h-full w-full object-cover" src={primaryLogo} alt="โลโก้ระบบ" /> : 'DD'}</div>
-      <div className="hidden h-10 w-10 place-items-center overflow-hidden rounded-[13px] border border-slate-200 bg-white text-xs font-bold text-slate-500 sm:grid">{secondaryLogo ? <img className="h-full w-full object-cover" src={secondaryLogo} alt="โลโก้หน่วยงาน" /> : 'หน่วย'}</div>
+      <div className="navbar-secondary-logo hidden h-10 w-10 place-items-center overflow-hidden rounded-[13px] border border-slate-200 bg-white text-xs font-bold text-slate-500 sm:grid">{secondaryLogo ? <img className="h-full w-full object-cover" src={secondaryLogo} alt="โลโก้หน่วยงาน" /> : 'หน่วย'}</div>
       <div className="hidden max-w-[180px] lg:block">
         <strong className="block truncate text-sm tracking-wide">{settings.app_title || 'D DRONE'}</strong>
         <span className="block truncate text-[8px] font-semibold tracking-[.04em] text-slate-600">{settings.organization_name || 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน'}</span>
+      </div>
+      <div className="navbar-mobile-title min-w-0">
+        <strong className="block max-w-[150px] truncate text-[12px] font-extrabold text-slate-900">{settings.app_title || 'D DRONE'}</strong>
+        <span className="mt-0.5 flex items-center gap-1.5 text-[9px] font-bold text-emerald-700"><span className="live-dot"/>ออนไลน์</span>
       </div>
     </div>
 
@@ -61,7 +66,7 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
       <Input value={search} onChange={(event) => onSearch(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void onSearchSubmit(); } }} className="border-0 bg-slate-100/80 pl-9" placeholder="ค้นหาเลขรายงาน สถานที่ หรือพิกัด" aria-label="ค้นหาเลขรายงาน สถานที่ หรือพิกัด" />
     </label>
 
-    <div className="ml-auto flex items-center gap-1 sm:gap-1.5 md:ml-0">
+    <div className="navbar-desktop-actions ml-auto flex items-center gap-1 sm:gap-1.5 md:ml-0">
       <IconTip label="ลงข้อมูลเหตุ"><Button asChild size="icon" className="shrink-0 bg-blue-600 text-white hover:bg-blue-700"><a href="/report/" aria-label="ลงข้อมูลเหตุ"><Plus size={17}/></a></Button></IconTip>
 
       <DropdownMenu.Root>
@@ -109,7 +114,15 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
     </div>
+
+    <div className="navbar-mobile-actions ml-auto items-center gap-1.5">
+      <Button asChild size="icon" className="h-10 w-10 shrink-0 rounded-xl bg-blue-600 text-white shadow-sm hover:bg-blue-700"><a href="/report/" aria-label="ลงข้อมูลเหตุ"><Plus size={18}/></a></Button>
+      <Button variant="secondary" size="icon" className="relative h-10 w-10 rounded-xl bg-white/90" onClick={onMobilePanel} aria-label="เปิดข้อมูลและเมนู">
+        <MoreHorizontal size={20}/>
+        {unread.length > 0 && <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[8px] font-bold text-white">{unread.length > 9 ? '9+' : unread.length}</span>}
+      </Button>
+    </div>
   </header>
-  {liveCoordinate && <div className="fixed right-3 top-[84px] z-[880] flex items-center gap-1.5 rounded-full border border-white/80 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-slate-600 shadow-lg backdrop-blur-md lg:hidden" title="พิกัดที่กำลังตรวจสอบ"><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="tabular-nums">{coordinateText}</span></div>}
+  {liveCoordinate && <div className="mobile-gps-pill fixed right-3 top-[84px] z-[880] flex items-center gap-1.5 rounded-full border border-white/80 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-slate-600 shadow-lg backdrop-blur-md lg:hidden" title="พิกัดที่กำลังตรวจสอบ"><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="tabular-nums">{coordinateText}</span></div>}
   </>;
 }
