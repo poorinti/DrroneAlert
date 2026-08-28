@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fa">
+  <title>D DRONE · Live Command</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body>
+  <div id="authLoading" class="auth-loading"><span class="loading-orb"></span>กำลังเปิดศูนย์บัญชาการ...</div>
+  <div id="app" class="app-shell d-none">
+    <div id="map" aria-label="แผนที่รายงานเหตุการณ์"></div>
+    <header class="topbar glass-panel">
+      <a class="brand" href="/dashboard/" aria-label="Dashboard"><span id="brandMark" class="brand-mark"><i class="bi bi-shield-check"></i></span><span class="brand-copy"><strong id="brandTitle">D DRONE</strong><small>COMMAND CENTER</small></span></a>
+      <div class="live-status"><span class="live-dot"></span><span>LIVE</span><small>Realtime</small></div>
+      <label class="nav-search" aria-label="ค้นหารายงาน"><i class="bi bi-search"></i><input id="searchInput" placeholder="ค้นหาเลขรายงานหรือสถานที่"></label>
+      <div class="top-actions"><button id="refreshBtn" class="icon-btn" title="รีเฟรช"><i class="bi bi-arrow-clockwise"></i></button><button id="settingsBtn" class="icon-btn d-none" title="ตั้งค่าแบรนด์"><i class="bi bi-sliders"></i></button><button id="changePasswordBtn" class="user-pill" title="บัญชีผู้ใช้"><span id="userInitial">U</span><span id="userBadge"></span></button><button id="logoutBtn" class="icon-btn" title="ออกจากระบบ"><i class="bi bi-box-arrow-right"></i></button></div>
+    </header>
+    <div class="left-stack">
+      <section class="stats-card glass-panel" aria-label="สถิติรายงาน"><div class="section-label"><span>ภาพรวมเหตุการณ์</span><small>LIVE STATS</small></div><div class="stats-grid"><article><i class="bi bi-broadcast"></i><strong id="statTotal">0</strong><span>ทั้งหมด</span></article><article><i class="bi bi-calendar2-day"></i><strong id="statToday">0</strong><span>วันนี้</span></article><article><i class="bi bi-activity"></i><strong id="statActive">0</strong><span>กำลังตรวจสอบ</span></article><article class="critical-stat"><i class="bi bi-exclamation-triangle"></i><strong id="statCritical">0</strong><span>Critical</span></article></div></section>
+      <section class="filter-card glass-panel"><div class="filter-title"><span><i class="bi bi-funnel"></i> กรองรายงาน</span><button id="clearFilters" type="button">ล้างตัวกรอง</button></div><div class="filter-row"><label>ระดับ<select id="severityFilter"><option value="">ทุกระดับ</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></label><label>สถานะ<select id="statusFilter"><option value="">ทุกสถานะ</option><option>NEW</option><option>ACKNOWLEDGED</option><option>INVESTIGATING</option><option>VERIFIED</option><option>FALSE_ALARM</option><option>RESOLVED</option><option>CLOSED</option></select></label></div></section>
+      <section class="report-panel glass-panel"><div class="panel-head"><div><strong>รายงานล่าสุด</strong><small>อัปเดตแบบเรียลไทม์</small></div><span id="reportCount">0 รายการ</span></div><div id="reportList" class="report-list"></div></section>
+    </div>
+    <div class="map-tools glass-panel" aria-label="คำอธิบายระดับความรุนแรง"><span><i class="legend-dot critical"></i>Critical</span><span><i class="legend-dot high"></i>High</span><span><i class="legend-dot medium"></i>Medium</span><span><i class="legend-dot low"></i>Low</span></div>
+    <aside id="detailDrawer" class="detail-drawer" aria-label="รายละเอียดรายงาน" aria-hidden="true"><button id="closeDrawer" class="close-drawer" aria-label="ปิดรายละเอียด"><i class="bi bi-x-lg"></i></button><div id="detailContent" class="detail-content"><div class="empty-detail">เลือกหมุดหรือรายงานเพื่อดูรายละเอียด</div></div></aside>
+  </div>
+  <div id="passwordModal" class="account-modal" aria-hidden="true"><div class="account-modal-card"><div class="account-modal-head"><div><strong>เปลี่ยนรหัสผ่าน</strong><small>รหัสใหม่อย่างน้อย 8 ตัวอักษร</small></div><button id="closePasswordModal" type="button"><i class="bi bi-x-lg"></i></button></div><div id="passwordError" class="form-error d-none"></div><label>รหัสผ่านปัจจุบัน<input id="currentPassword" type="password" autocomplete="current-password"></label><label>รหัสผ่านใหม่<input id="newPassword" type="password" autocomplete="new-password"></label><label>ยืนยันรหัสผ่านใหม่<input id="confirmPassword" type="password" autocomplete="new-password"></label><button id="savePasswordBtn" class="primary-btn" type="button">บันทึกรหัสผ่านใหม่</button></div></div>
+  <div id="settingsModal" class="account-modal" aria-hidden="true"><form id="settingsForm" class="account-modal-card"><div class="account-modal-head"><div><strong>Branding Settings</strong><small>ปรับชื่อและโลโก้ที่แสดงบน Dashboard</small></div><button id="closeSettingsModal" type="button"><i class="bi bi-x-lg"></i></button></div><div id="settingsError" class="form-error d-none"></div><label>ชื่อโครงการ<input id="appTitleInput" name="appTitle" maxlength="100" placeholder="D DRONE" required></label><label>โลโก้ <small>PNG, JPG, WEBP หรือ GIF ไม่เกิน 2 MB</small><input id="appLogoInput" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><div class="logo-preview"><span id="logoPreviewFallback"><i class="bi bi-shield-check"></i></span><img id="logoPreview" alt="ตัวอย่างโลโก้" class="d-none"><div><strong>ตัวอย่างโลโก้</strong><small>แนะนำภาพสี่เหลี่ยมจัตุรัส</small></div></div><button id="saveSettingsBtn" class="primary-btn" type="submit">บันทึกการตั้งค่า</button></form></div>
+  <div id="imageLightbox" class="image-lightbox" aria-hidden="true"><button id="closeLightbox" aria-label="ปิดภาพ"><i class="bi bi-x-lg"></i></button><img id="lightboxImage" alt="ภาพเหตุการณ์ขนาดใหญ่"></div><div id="toast" class="toast-alert"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="/socket.io/socket.io.js"></script><script src="/assets/dashboard.js"></script>
+</body>
+</html>

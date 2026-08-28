@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>แจ้งเหตุพบโดรนหรืออากาศยาน</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/assets/report.css">
+</head>
+<body>
+  <header class="report-header">
+    <div class="container report-shell d-flex align-items-center justify-content-between gap-3">
+      <div><div class="brand-kicker">DRONE ALERT</div><h1 class="brand-title mb-0">แจ้งเหตุพบโดรนหรืออากาศยาน</h1></div>
+      <div class="drone-mark" aria-hidden="true">✦</div>
+    </div>
+  </header>
+
+  <main class="container report-shell py-4 py-md-5">
+    <div class="intro-card mb-4"><div><span class="status-dot"></span> ระบบรับแจ้งเหตุออนไลน์</div><p class="mb-0 mt-2 text-secondary">ใช้เวลาเพียงไม่กี่นาที: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p></div>
+
+    <div class="stepper mb-4" id="stepper">
+      <button type="button" class="step-item active" data-step-target="1"><span>1</span><strong>ข้อมูลพื้นฐาน</strong></button><div class="step-line"></div>
+      <button type="button" class="step-item" data-step-target="2"><span>2</span><strong>รายละเอียด</strong></button><div class="step-line"></div>
+      <button type="button" class="step-item" data-step-target="3"><span>3</span><strong>หลักฐาน</strong></button>
+    </div>
+
+    <form id="reportForm" novalidate>
+      <section class="form-step active" data-step="1">
+        <div class="section-card">
+          <div class="section-heading"><div><span class="section-number">01</span><h2>ข้อมูลผู้รายงาน</h2></div><p>เลือกประเภทผู้รายงานก่อน ระบบจะแสดงเฉพาะช่องที่จำเป็น</p></div>
+          <div id="lineIdentity" class="line-identity d-none"></div>
+          <div class="reporter-type-grid" role="radiogroup" aria-label="ประเภทผู้รายงาน">
+            <label class="choice-card"><input type="radio" name="reporterType" value="ANONYMOUS"><span class="choice-icon">◌</span><strong>ไม่ระบุตัวตน</strong><small>ไม่เก็บชื่อและข้อมูลติดต่อ</small></label>
+            <label class="choice-card selected"><input type="radio" name="reporterType" value="PUBLIC" checked><span class="choice-icon">●</span><strong>บุคคลทั่วไป</strong><small>ระบุชื่อและช่องทางติดต่อ</small></label>
+            <label class="choice-card"><input type="radio" name="reporterType" value="OFFICIAL"><span class="choice-icon">◆</span><strong>หน่วยงาน</strong><small>สำหรับเจ้าหน้าที่หรือองค์กร</small></label>
+          </div>
+          <div id="identityFields" class="row g-3 mt-1">
+            <div class="col-12 col-md-6"><label class="form-label">ชื่อผู้รายงาน <span class="required">*</span></label><input class="form-control form-control-lg" id="reporterName" name="reporterName" autocomplete="name" placeholder="ชื่อ-นามสกุล หรือชื่อเรียก"></div>
+            <div class="col-12 col-md-6 official-only d-none"><label class="form-label">หน่วยงาน <span class="required">*</span></label><input class="form-control form-control-lg" id="organization" name="organization" placeholder="ชื่อหน่วยงาน"></div>
+            <div class="col-12 col-md-6"><label class="form-label">เบอร์โทร</label><input class="form-control form-control-lg" name="phone" inputmode="tel" autocomplete="tel" placeholder="เช่น 08x-xxx-xxxx"></div>
+            <div class="col-12 col-md-6"><label class="form-label">อีเมล</label><input class="form-control form-control-lg" id="reporterEmail" name="email" type="email" autocomplete="email" placeholder="name@example.com"></div>
+          </div>
+        </div>
+
+        <div class="section-card mt-3">
+          <div class="section-heading"><div><span class="section-number">02</span><h2>วัน เวลา และตำแหน่งที่พบ</h2></div><p>GPS ของคุณเป็นเพียงจุดตั้งต้น สามารถลากหมุดไปยังตำแหน่งที่พบจริงได้</p></div>
+          <div class="row g-3">
+            <div class="col-12 col-md-6"><label class="form-label">วัน / เวลาที่ตรวจพบ <span class="required">*</span></label><input class="form-control form-control-lg" type="datetime-local" id="occurredAt" name="occurredAt" required></div>
+            <div class="col-12 col-md-6"><label class="form-label">ชื่อสถานที่</label><input class="form-control form-control-lg" name="locationName" placeholder="เช่น บริเวณสนามกีฬา / บ้านเลขที่ / จุดสังเกต"></div>
+          </div>
+          <div class="map-toolbar mt-3"><button type="button" class="btn btn-dark btn-lg" id="locateBtn">⌖ ใช้ตำแหน่งของฉัน</button><div class="coordinate-chip" id="coordinateText">ยังไม่ได้ปักตำแหน่ง</div></div>
+          <div id="reportMap" class="report-map mt-3" aria-label="แผนที่เลือกตำแหน่ง"></div>
+          <input type="hidden" name="incidentLat" id="incidentLat"><input type="hidden" name="incidentLng" id="incidentLng"><input type="hidden" name="reporterLat" id="reporterLat"><input type="hidden" name="reporterLng" id="reporterLng"><input type="hidden" name="gpsAccuracyM" id="gpsAccuracyM">
+          <div class="map-hint">แตะบนแผนที่เพื่อปักหมุด หรือกดค้างแล้วลากหมุดเพื่อแก้ตำแหน่ง</div>
+        </div>
+        <div class="step-actions justify-content-end"><button type="button" class="btn btn-primary btn-lg px-4" data-next>ถัดไป: รายละเอียด →</button></div>
+      </section>
+
+      <section class="form-step" data-step="2">
+        <div class="section-card">
+          <div class="section-heading"><div><span class="section-number">03</span><h2>รายละเอียดสิ่งที่พบ</h2></div><p>กรอกเท่าที่เห็นจริง ช่องที่ไม่ทราบสามารถเว้นได้</p></div>
+          <label class="form-label">ประเภทที่พบ <span class="required">*</span></label>
+          <div class="object-type-grid mb-4"><label class="object-card selected"><input type="radio" name="objectType" value="DRONE" checked><span>▰</span><strong>โดรน</strong></label><label class="object-card"><input type="radio" name="objectType" value="AIRCRAFT"><span>△</span><strong>อากาศยาน</strong></label><label class="object-card"><input type="radio" name="objectType" value="UNKNOWN"><span>?</span><strong>ไม่สามารถระบุ</strong></label></div>
+          <div class="row g-3">
+            <div class="col-12 col-md-6"><label class="form-label">ทิศทางการบิน</label><input class="form-control form-control-lg" name="direction" placeholder="เช่น เหนือ → ใต้"></div>
+            <div class="col-6 col-md-3"><label class="form-label">ความเร็วโดยประมาณ</label><input class="form-control form-control-lg" name="speedEstimate" placeholder="เช่น ช้า / 30 กม./ชม."></div>
+            <div class="col-6 col-md-3"><label class="form-label">ความสูงโดยประมาณ</label><input class="form-control form-control-lg" name="altitudeEstimate" placeholder="เช่น 100 ม."></div>
+            <div class="col-6 col-md-4"><label class="form-label">ระยะห่างจากผู้พบ</label><input class="form-control form-control-lg" name="distanceEstimate" placeholder="เช่น 300 ม."></div>
+            <div class="col-6 col-md-4"><label class="form-label">จำนวน</label><input class="form-control form-control-lg" name="objectCount" type="number" min="1" max="999" placeholder="1"></div>
+            <div class="col-12 col-md-4"><label class="form-label">ระดับความเร่งด่วน</label><select class="form-select form-select-lg" name="reporterSeverity"><option value="LOW">ต่ำ</option><option value="MEDIUM" selected>ปานกลาง</option><option value="HIGH">สูง</option><option value="CRITICAL">ฉุกเฉิน</option></select></div>
+            <div class="col-12"><label class="form-label">ลักษณะที่สังเกตเห็น</label><textarea class="form-control" name="appearanceNotes" rows="3" placeholder="สี รูปร่าง ไฟกระพริบ เสียง ลักษณะเฉพาะ ฯลฯ"></textarea></div>
+            <div class="col-12"><label class="form-label">รายละเอียดเพิ่มเติม</label><textarea class="form-control" name="description" rows="4" placeholder="อธิบายเหตุการณ์เพิ่มเติม เช่น บินวนอยู่กี่นาที เคลื่อนที่ไปทางใด หรือมีพฤติกรรมผิดปกติอย่างไร"></textarea></div>
+          </div>
+        </div>
+        <div class="step-actions"><button type="button" class="btn btn-outline-secondary btn-lg" data-prev>← ย้อนกลับ</button><button type="button" class="btn btn-primary btn-lg" data-next>ถัดไป: หลักฐาน →</button></div>
+      </section>
+
+      <section class="form-step" data-step="3">
+        <div class="section-card">
+          <div class="section-heading"><div><span class="section-number">04</span><h2>หลักฐานที่ตรวจพบ</h2></div><p>แนบภาพถ่ายได้สูงสุด 5 รูป และขนาดรวมไม่เกิน 50 MB</p></div>
+          <label class="upload-zone" for="images"><input type="file" id="images" name="images" accept="image/*" multiple hidden><span class="upload-icon">＋</span><strong>ถ่ายภาพหรือเลือกรูป</strong><small>JPG, PNG, HEIC หรือรูปภาพที่โทรศัพท์รองรับ</small></label>
+          <div class="upload-meta mt-2"><span id="fileCount">0 รูป</span><span id="fileSize">0 MB / 50 MB</span></div><div class="preview-grid mt-3" id="previewGrid"></div>
+        </div>
+        <div class="section-card mt-3 review-card"><div class="section-heading mb-3"><div><span class="section-number">05</span><h2>ตรวจสอบก่อนส่ง</h2></div><p>ตรวจข้อมูลอีกครั้งก่อนส่งเข้าศูนย์รับแจ้ง</p></div><div class="review-grid" id="reviewSummary"></div></div>
+        <div id="formAlert" class="alert d-none mt-3" role="alert"></div>
+        <div class="step-actions"><button type="button" class="btn btn-outline-secondary btn-lg" data-prev>← ย้อนกลับ</button><button type="submit" class="btn btn-danger btn-lg submit-btn" id="submitBtn">ส่งรายงานเหตุ</button></div>
+      </section>
+    </form>
+
+    <section class="success-panel d-none" id="successPanel"><div class="success-icon">✓</div><div class="brand-kicker">REPORT RECEIVED</div><h2>รับรายงานเรียบร้อยแล้ว</h2><p class="text-secondary">เลขที่รายงานของคุณ</p><div class="report-number" id="successReportNo">-</div><p class="mb-4">ข้อมูลถูกส่งเข้าศูนย์รับแจ้งแล้ว กรุณาเก็บเลขนี้ไว้สำหรับอ้างอิง</p><button class="btn btn-dark btn-lg" type="button" id="newReportBtn">แจ้งเหตุใหม่</button></section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="/assets/report.js"></script>
+</body>
+</html>

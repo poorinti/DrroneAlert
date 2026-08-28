@@ -1,0 +1,6 @@
+import { Filter } from 'lucide-react';
+import { Card } from '../ui/card';
+import { Select } from '../ui/select';
+import { severityLabels, statusLabels } from '../../lib/labels';
+
+export function FilterCard({ severity, status, onSeverity, onStatus, onClear }: { severity: string; status: string; onSeverity: (v: string) => void; onStatus: (v: string) => void; onClear: () => void }) { const severityOptions = [{ value: 'ALL', label: 'ทุกระดับ' }, ...Object.entries(severityLabels).map(([value, label]) => ({ value, label }))]; const statusOptions = [{ value: 'ALL', label: 'ทุกสถานะ' }, ...['NEW','INVESTIGATING','VERIFIED','RESOLVED','CLOSED'].map((value) => ({ value, label: statusLabels[value] }))]; return <Card className="p-3.5"><div className="flex items-center justify-between text-[11px] font-semibold"><span className="flex items-center gap-1.5"><Filter size={13} />ตัวกรอง</span><button onClick={onClear} className="text-[9px] font-medium text-primary">ล้างตัวกรอง</button></div><div className="mt-2.5 grid grid-cols-2 gap-2"><Select value={severity || 'ALL'} onValueChange={(v) => onSeverity(v === 'ALL' ? '' : v)} placeholder="ทุกระดับ" options={severityOptions} /><Select value={status || 'ALL'} onValueChange={(v) => onStatus(v === 'ALL' ? '' : v)} placeholder="ทุกสถานะ" options={statusOptions} /></div></Card>; }

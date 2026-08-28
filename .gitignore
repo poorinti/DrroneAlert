@@ -1,0 +1,9 @@
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+.env
+uploads/*
+!uploads/.gitkeep
+npm-debug.log*
+.DS_Store
