@@ -9,6 +9,7 @@ RUN npm run build
 FROM node:22-alpine
 
 WORKDIR /app
+RUN apk add --no-cache font-tlwg fontconfig
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY . .

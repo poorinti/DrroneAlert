@@ -45,16 +45,65 @@ function prepareImages() {
   for (const [name, label, sky, accent] of images) fs.writeFileSync(path.join(demoDir, name), svg(label, sky, accent));
 }
 
-function timeFor(index) {
+const demoDayOffsets = [0, 0, 0, 1, 1, 2, 2, 3, 5, 7, 10, 14, 20, 28, 32, 40, 48, 60, 75, 90];
+
+function mysqlLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  const second = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
+function timeFor(index, minutesEarlier = 0) {
   const date = new Date(baseDate);
-  date.setHours(date.getHours() - index * 7 - 1);
-  return date.toISOString().slice(0, 19).replace('T', ' ');
+  const dayOffset = demoDayOffsets[index] ?? index * 3;
+  date.setDate(date.getDate() - dayOffset);
+  date.setHours(8 + ((index * 2) % 11), (index * 11) % 55, 0, 0);
+  date.setMinutes(date.getMinutes() - minutesEarlier);
+  return mysqlLocal(date);
+}
+
+async function refreshExistingDemoSchedule(rows) {
+  if (rows.length !== incidents.length) return false;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    for (let index = 0; index < rows.length; index += 1) {
+      const submitted = timeFor(index);
+      const occurred = timeFor(index, 12 + (index % 5) * 9);
+      await conn.execute('UPDATE reports SET occurred_at = ?, submitted_at = ? WHERE id = ?', [occurred, submitted, rows[index].id]);
+      await conn.execute('UPDATE report_history SET created_at = ? WHERE report_id = ?', [submitted, rows[index].id]);
+      await conn.execute('UPDATE report_notes SET created_at = ? WHERE report_id = ?', [submitted, rows[index].id]);
+      await conn.execute('UPDATE report_reads SET read_at = ? WHERE report_id = ?', [submitted, rows[index].id]);
+    }
+    await conn.commit();
+    return true;
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
 }
 
 async function main() {
-  const [existing] = await pool.query("SELECT COUNT(*) AS count FROM reports WHERE report_no LIKE 'DEMO-%'");
-  if (Number(existing[0].count) > 0) {
-    console.log(`Demo data already exists (${existing[0].count} reports). No changes made.`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS report_reads (
+    report_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (report_id, user_id),
+    CONSTRAINT fk_report_reads_report FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+    CONSTRAINT fk_report_reads_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
+  const [existingRows] = await pool.query("SELECT id, report_no FROM reports WHERE report_no LIKE 'DEMO-%' ORDER BY report_no");
+  if (existingRows.length > 0) {
+    const refreshed = await refreshExistingDemoSchedule(existingRows);
+    console.log(refreshed
+      ? `Demo data already exists (${existingRows.length} reports). Refreshed DEMO/TEST timestamps across multiple days/months without deleting data.`
+      : `Demo data already exists (${existingRows.length} reports). No changes made because the count differs from the expected ${incidents.length}.`);
     await pool.end();
     return;
   }
@@ -77,8 +126,8 @@ async function main() {
         const [result] = await conn.execute(`INSERT INTO reporters (source, reporter_type, name, phone, organization) VALUES ('WEB', ?, ?, ?, ?)`, [reporterType, `ผู้แจ้งเดโม ${index + 1}`, `09${String(10000000 + index).slice(-8)}`, reporterType === 'OFFICIAL' ? `หน่วยงานทดสอบ ${index + 1}` : null]);
         reporterId = result.insertId;
       }
-      const occurred = timeFor(index + 1);
       const submitted = timeFor(index);
+      const occurred = timeFor(index, 12 + (index % 5) * 9);
       const reportNo = `DEMO-${String(index + 1).padStart(3, '0')}`;
       const [reportResult] = await conn.execute(`INSERT INTO reports (report_no, reporter_id, source, object_type, reporter_severity, operator_severity, status, location_name, incident_lat, incident_lng, reporter_lat, reporter_lng, gps_accuracy_m, direction, speed_estimate, altitude_estimate, distance_estimate, object_count, appearance_notes, description, occurred_at, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [reportNo, reporterId, source, objectType, reporterSeverity, index % 3 === 0 ? reporterSeverity : null, status, `[DEMO] ${location}`, lat, lng, lat + 0.002, lng + 0.002, 12 + index, direction, speed, altitude, distance, count, 'ข้อมูลเดโมสำหรับทดสอบระบบ ไม่ใช่เหตุการณ์จริง', `${description} (ข้อมูล DEMO/TEST)`, occurred, submitted]);
       const reportId = reportResult.insertId;

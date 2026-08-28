@@ -1,5 +1,6 @@
 import { Image, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { brandingAssetUrl } from '../../lib/branding';
 import type { Settings } from '../../types';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../ui/dialog';
@@ -7,7 +8,7 @@ import { Input } from '../ui/input';
 
 export function SettingsDialog({ open, settings, onOpenChange, onSave }: { open: boolean; settings: Settings; onOpenChange: (open: boolean) => void; onSave: (form: FormData) => Promise<void> }) {
   const [title,setTitle]=useState(settings.app_title),[organization,setOrganization]=useState(settings.organization_name),[primary,setPrimary]=useState<File|null>(null),[secondary,setSecondary]=useState<File|null>(null),[primaryPreview,setPrimaryPreview]=useState(''),[secondaryPreview,setSecondaryPreview]=useState(''),[error,setError]=useState(''),[saving,setSaving]=useState(false);
-  useEffect(()=>{setTitle(settings.app_title||'D DRONE');setOrganization(settings.organization_name||'');setPrimary(null);setSecondary(null);setPrimaryPreview(settings.app_logo_path?`/uploads/${settings.app_logo_path}`:'');setSecondaryPreview(settings.secondary_logo_path?`/uploads/${settings.secondary_logo_path}`:'');setError('')},[settings,open]);
+  useEffect(()=>{setTitle(settings.app_title||'D DRONE');setOrganization(settings.organization_name||'');setPrimary(null);setSecondary(null);setPrimaryPreview(brandingAssetUrl(settings.app_logo_path));setSecondaryPreview(brandingAssetUrl(settings.secondary_logo_path));setError('')},[settings,open]);
   const choose=(file:File|null,kind:'primary'|'secondary')=>{if(kind==='primary'){setPrimary(file);if(file)setPrimaryPreview(URL.createObjectURL(file));}else{setSecondary(file);if(file)setSecondaryPreview(URL.createObjectURL(file));}};
   async function submit(e:React.FormEvent){e.preventDefault();if(!title.trim())return setError('กรุณาระบุชื่อโครงการ');const form=new FormData();form.set('appTitle',title.trim());form.set('organizationName',organization.trim());if(primary)form.set('logo',primary);if(secondary)form.set('secondaryLogo',secondary);setSaving(true);setError('');try{await onSave(form);onOpenChange(false)}catch(e){setError(e instanceof Error?e.message:'บันทึกไม่สำเร็จ')}finally{setSaving(false)}}
   const logoPicker=(label:string,preview:string,kind:'primary'|'secondary')=><label className="mt-4 block text-[11px] font-semibold">{label}<span className="ml-1 font-normal text-muted">PNG, JPG, WEBP หรือ GIF ไม่เกิน 2 MB</span><span className="mt-1.5 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3"><span className="grid h-14 w-14 place-items-center overflow-hidden rounded-2xl bg-blue-500 text-white">{preview?<img className="h-full w-full object-cover" src={preview} alt={label}/>:<Image size={20}/>}</span><span className="text-xs font-medium text-slate-600"><Upload className="mb-1" size={15}/>เลือกไฟล์ {label}</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(e)=>choose(e.target.files?.[0]||null,kind)}/></span></label>;

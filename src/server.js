@@ -37,9 +37,16 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(sessionMiddleware);
 
-app.use('/uploads', requireAuth, express.static(path.join(__dirname, '..', 'uploads'), {
+const uploadRoot = path.join(__dirname, '..', 'uploads');
+app.use('/branding-assets', express.static(path.join(uploadRoot, 'branding'), {
   fallthrough: false,
-  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0
+  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+  dotfiles: 'deny'
+}));
+app.use('/uploads', requireAuth, express.static(uploadRoot, {
+  fallthrough: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+  dotfiles: 'deny'
 }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 

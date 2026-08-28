@@ -746,7 +746,7 @@ Mobile-first
 - Detail Drawer ขวา
 - Card ไม่เยอะเกินไป
 - Notification เฉพาะเหตุใหม่/ระดับสูง
-- รองรับจอ Desktop เป็นหลัก
+- รองรับ Desktop, Laptop, iPad/Tablet และ Mobile โดยปรับความหนาแน่นของ control ตามขนาดจอ
 
 ### Workflow เหตุการณ์และการแจ้งเตือน (Implemented)
 
@@ -755,6 +755,11 @@ Mobile-first
 - `report_reads(report_id, user_id, read_at)` เก็บสถานะอ่านเป็นรายผู้ใช้ กระดิ่งจะแสดงเฉพาะเหตุที่ยังไม่อ่าน
 - รายการหลักและหมุดแผนที่แสดงสถานะ `NEW`, `ACKNOWLEDGED`, `INVESTIGATING`, `VERIFIED`
 - เมื่อเลือก “ดำเนินการเสร็จสิ้น” เหตุจะเป็น `RESOLVED` และย้ายไปที่เมนู “เหตุการณ์ย้อนหลัง” ซึ่งรวม `FALSE_ALARM`, `RESOLVED`, `CLOSED`
+- แผนที่มี Floating annotation palette ที่ด้านล่างกลาง: Select, Point, Pen, Line, Arrow, Polygon, Rectangle, Circle, Text, Callout, Target, Eraser, Undo และ Clear
+- Annotation เป็นข้อมูลชั่วคราวฝั่ง client แยกจาก incident report จึงไม่หายเมื่อกรองรายการหรือสลับแผนที่ และจัดชั้นเหนือหมุดเหตุการณ์ด้วย Leaflet panes
+- ตัวเลือก Current/History อยู่ใน Filter card ฝั่งซ้ายแบบย่อ พร้อมปุ่มวันก่อนหน้า/ถัดไป และ popover สำหรับวันเดียว ช่วงวันที่ หรือเดือน; API รองรับ `date=YYYY-MM-DD`, `from/to=YYYY-MM-DD` และ `month=YYYY-MM`
+- ใช้ Light mode เพียงโหมดเดียว เลือก Basemap ได้ 6 แบบจากเมนู Layers บน Navbar และจดจำตัวเลือกใน browser
+- ปุ่ม Export บน Navbar เปิด dialog ให้เลือก PDF/Excel และรายวัน/รายเดือน/ช่วงวันที่; backend สร้างไฟล์จาก MySQL โดยตรงและจำกัดสิทธิ์เฉพาะผู้ใช้ที่เข้าสู่ระบบ
 
 ---
 

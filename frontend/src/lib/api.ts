@@ -15,3 +15,4 @@ export const markRead = (id: number) => api<{ ok: boolean }>(`/api/admin/reports
 export const markAllRead = () => api<{ ok: boolean }>('/api/admin/reports/read-all', { method: 'POST' });
 export const getNotifications = () => api<{ unread_count: number; reports: ReportSummary[] }>('/api/admin/notifications');
 export const getReport = (id: number) => api<DetailResponse>(`/api/admin/reports/${id}`);
+export const geocodePlace = (query: string) => api<{ display_name: string; lat: number; lng: number }>(`/api/admin/geocode?q=${encodeURIComponent(query)}`);

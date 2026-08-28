@@ -1,20 +1,212 @@
-import { useEffect, useMemo } from 'react';
 import L from 'leaflet';
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MapContainer, Marker, Pane, Popup, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Copy, ExternalLink } from 'lucide-react';
+import { mapStyles, type MapStyleId } from '../../lib/mapStyles';
 import { severityLabels } from '../../lib/labels';
 import { timeAgo } from '../../lib/utils';
 import type { ReportSummary } from '../../types';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { MapAnnotationTools } from './MapAnnotationTools';
+
+export type MapCoordinate = { lat: number; lng: number };
+export type InspectionLocation = MapCoordinate & { label?: string; fly?: boolean; token: number };
 
 const colors: Record<string, string> = { LOW: '#4b8da3', MEDIUM: '#e6a528', HIGH: '#ef7138', CRITICAL: '#e6384f' };
-const effectiveSeverity = (r: ReportSummary) => r.effective_severity || r.operator_severity || r.reporter_severity || 'MEDIUM';
-function iconFor(report: ReportSummary, selected: boolean) { const sev = effectiveSeverity(report); return L.divIcon({ className: '', html: `<div class="incident-pin${selected ? ' selected' : ''}" style="--pin:${colors[sev]}"><span></span></div>`, iconSize: [28,28], iconAnchor: [14,25], popupAnchor: [0,-23] }); }
-function MapFocus({ selected }: { selected?: ReportSummary }) { const map = useMap(); useEffect(() => { if (selected) map.flyTo([Number(selected.incident_lat), Number(selected.incident_lng)], Math.max(map.getZoom(), 14), { duration: .8 }); }, [selected, map]); return null; }
-export function IncidentMap({ reports, selectedId, onSelect, isDark }: { reports: ReportSummary[]; selectedId: number | null; onSelect: (r: ReportSummary) => void; isDark: boolean }) {
-  const selected = reports.find((r) => r.id === selectedId);
-  const validReports = useMemo(() => reports.filter((r) => Number.isFinite(Number(r.incident_lat)) && Number.isFinite(Number(r.incident_lng))), [reports]);
-  const tile = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  return <MapContainer center={[15.87,100.99]} zoom={6} zoomControl className="absolute inset-0 h-full w-full"><TileLayer attribution="&copy; OpenStreetMap &copy; CARTO" url={tile} maxZoom={19} /><MapFocus selected={selected} />{validReports.map((report) => { const sev = effectiveSeverity(report); return <Marker key={report.id} position={[Number(report.incident_lat), Number(report.incident_lng)]} icon={iconFor(report, report.id === selectedId)} eventHandlers={{ click: () => onSelect(report) }}><Popup closeButton={false} maxWidth={250}><div className="w-[230px] overflow-hidden rounded-2xl bg-white">{report.cover_image && <img src={`/uploads/${report.cover_image}`} className="h-28 w-full object-cover" alt="ภาพเหตุการณ์" />}<div className="p-3"><div className="flex items-center gap-2"><strong className="text-[11px]">{report.report_no}</strong><Badge tone={sev}>{severityLabels[sev]}</Badge></div><p className="mb-0 mt-2 text-[11px] font-semibold">{report.location_name || 'ไม่ระบุสถานที่'}</p><span className="text-[9px] text-muted">{timeAgo(report.submitted_at)}</span><Button size="sm" className="mt-2 w-full" onClick={() => onSelect(report)}>ดูรายละเอียด</Button></div></div></Popup></Marker>; })}</MapContainer>;
+const effectiveSeverity = (report: ReportSummary) => report.effective_severity || report.operator_severity || report.reporter_severity || 'MEDIUM';
+
+function iconFor(report: ReportSummary, selected: boolean) {
+  const severity = effectiveSeverity(report);
+  return L.divIcon({ className: '', html: `<div class="incident-pin${selected ? ' selected' : ''}" style="--pin:${colors[severity]}"><span></span></div>`, iconSize: [28, 28], iconAnchor: [14, 25], popupAnchor: [0, -23] });
+}
+
+const inspectionIcon = L.divIcon({
+  className: 'gps-inspection-icon',
+  html: '<div class="gps-inspection-marker"><span></span></div>',
+  iconSize: [34, 34],
+  iconAnchor: [17, 17],
+  popupAnchor: [0, -14],
+});
+
+function MapFocus({ selected }: { selected?: ReportSummary }) {
+  const map = useMap();
+  useEffect(() => {
+    if (selected) map.flyTo([Number(selected.incident_lat), Number(selected.incident_lng)], Math.max(map.getZoom(), 14), { duration: .8 });
+  }, [selected, map]);
+  return null;
+}
+
+function MapInspector({ disabled, onCoordinate, onInspect }: { disabled: boolean; onCoordinate: (coordinate: MapCoordinate) => void; onInspect: (coordinate: MapCoordinate) => void }) {
+  const map = useMap();
+  const pending = useRef<MapCoordinate | null>(null);
+  const frame = useRef<number | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    map.doubleClickZoom.disable();
+    return () => {
+      map.doubleClickZoom.enable();
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    };
+  }, [map]);
+
+  useEffect(() => {
+    const container = map.getContainer();
+    const cancelLongPress = () => {
+      if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+      touchStart.current = null;
+    };
+    const coordinateFromTouch = (touch: Touch) => {
+      const rect = container.getBoundingClientRect();
+      return map.containerPointToLatLng(L.point(touch.clientX - rect.left, touch.clientY - rect.top));
+    };
+    const handleTouchStart = (event: TouchEvent) => {
+      if (disabled || event.touches.length !== 1) return cancelLongPress();
+      const touch = event.touches[0];
+      touchStart.current = { x: touch.clientX, y: touch.clientY };
+      const latlng = coordinateFromTouch(touch);
+      const coordinate = { lat: latlng.lat, lng: latlng.lng };
+      if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = window.setTimeout(() => {
+        longPressTimer.current = null;
+        touchStart.current = null;
+        onCoordinate(coordinate);
+        onInspect(coordinate);
+      }, 650);
+    };
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!touchStart.current || event.touches.length !== 1) return cancelLongPress();
+      const touch = event.touches[0];
+      const dx = touch.clientX - touchStart.current.x;
+      const dy = touch.clientY - touchStart.current.y;
+      if (Math.hypot(dx, dy) > 12) cancelLongPress();
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', cancelLongPress, { passive: true });
+    container.addEventListener('touchcancel', cancelLongPress, { passive: true });
+    return () => {
+      cancelLongPress();
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', cancelLongPress);
+      container.removeEventListener('touchcancel', cancelLongPress);
+    };
+  }, [disabled, map, onCoordinate, onInspect]);
+
+  useMapEvents({
+    mousemove(event) {
+      pending.current = { lat: event.latlng.lat, lng: event.latlng.lng };
+      if (frame.current !== null) return;
+      frame.current = requestAnimationFrame(() => {
+        frame.current = null;
+        if (!pending.current) return;
+        onCoordinate(pending.current);
+      });
+    },
+    dblclick(event) {
+      if (disabled) return;
+      L.DomEvent.preventDefault(event.originalEvent);
+      L.DomEvent.stopPropagation(event.originalEvent);
+      const coordinate = { lat: event.latlng.lat, lng: event.latlng.lng };
+      onCoordinate(coordinate);
+      onInspect(coordinate);
+    },
+  });
+  return null;
+}
+
+function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLocation; onNotify: (message: string) => void }) {
+  const map = useMap();
+  const markerRef = useRef<L.Marker | null>(null);
+  const coordinate = `${inspection.lat.toFixed(6)}, ${inspection.lng.toFixed(6)}`;
+  const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${inspection.lat},${inspection.lng}`)}`;
+
+  useEffect(() => {
+    if (inspection.fly) map.flyTo([inspection.lat, inspection.lng], Math.max(map.getZoom(), 16), { duration: .75 });
+    const timer = window.setTimeout(() => markerRef.current?.openPopup(), inspection.fly ? 620 : 40);
+    return () => window.clearTimeout(timer);
+  }, [inspection.token, inspection.lat, inspection.lng, inspection.fly, map]);
+
+  async function copy() {
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(coordinate);
+      else throw new Error('clipboard unavailable');
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = coordinate;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
+    onNotify('คัดลอกพิกัดแล้ว');
+  }
+
+  return <Pane name="gps-inspection" style={{ zIndex: 710 }}>
+    <Marker ref={markerRef} position={[inspection.lat, inspection.lng]} icon={inspectionIcon} pane="gps-inspection">
+      <Popup minWidth={245} maxWidth={290} closeButton>
+        <div className="gps-popup">
+          <strong>พิกัดตำแหน่ง</strong>
+          {inspection.label && <p className="gps-popup-label">{inspection.label}</p>}
+          <dl><div><dt>Latitude</dt><dd>{inspection.lat.toFixed(6)}</dd></div><div><dt>Longitude</dt><dd>{inspection.lng.toFixed(6)}</dd></div></dl>
+          <code>{coordinate}</code>
+          <div className="gps-popup-actions">
+            <button type="button" onClick={copy}><Copy size={13}/>คัดลอกพิกัด</button>
+            <a href={googleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>Google Maps</a>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  </Pane>;
+}
+
+export function IncidentMap({ reports, selectedId, onSelect, mapStyle, inspection, onInspect, onCoordinateChange, onNotify }: {
+  reports: ReportSummary[];
+  selectedId: number | null;
+  onSelect: (report: ReportSummary) => void;
+  mapStyle: MapStyleId;
+  inspection: InspectionLocation | null;
+  onInspect: (coordinate: MapCoordinate) => void;
+  onCoordinateChange: (coordinate: MapCoordinate) => void;
+  onNotify: (message: string) => void;
+}) {
+  const selected = reports.find((report) => report.id === selectedId);
+  const validReports = useMemo(() => reports.filter((report) => Number.isFinite(Number(report.incident_lat)) && Number.isFinite(Number(report.incident_lng))), [reports]);
+  const activeStyle = mapStyles.find((style) => style.id === mapStyle) || mapStyles[0];
+  const [drawingActive, setDrawingActive] = useState(false);
+
+  return <div className="absolute inset-0">
+    <MapContainer center={[15.87, 100.99]} zoom={6} zoomControl={false} className="absolute inset-0 h-full w-full" doubleClickZoom={false}>
+      <ZoomControl position="bottomright" />
+      <TileLayer key={activeStyle.id} attribution={activeStyle.attribution} url={activeStyle.url} maxZoom={19} maxNativeZoom={activeStyle.maxNativeZoom} />
+      <MapFocus selected={selected} />
+      <MapInspector disabled={drawingActive} onCoordinate={onCoordinateChange} onInspect={onInspect}/>
+      {validReports.map((report) => {
+        const severity = effectiveSeverity(report);
+        return <Marker key={report.id} position={[Number(report.incident_lat), Number(report.incident_lng)]} icon={iconFor(report, report.id === selectedId)} eventHandlers={{ click: () => onSelect(report) }}>
+          <Popup closeButton={false} maxWidth={250}>
+            <div className="w-[230px] overflow-hidden rounded-2xl bg-white">
+              {report.cover_image && <img src={`/uploads/${report.cover_image}`} className="h-28 w-full object-cover" alt="ภาพเหตุการณ์" />}
+              <div className="p-3">
+                <div className="flex items-center gap-2"><strong className="text-[11px]">{report.report_no}</strong><Badge tone={severity}>{severityLabels[severity]}</Badge></div>
+                <p className="mb-0 mt-2 text-[11px] font-semibold">{report.location_name || 'ไม่ระบุสถานที่'}</p>
+                <span className="text-[9px] text-muted">{timeAgo(report.submitted_at)}</span>
+                <Button size="sm" className="mt-2 w-full" onClick={() => onSelect(report)}>ดูรายละเอียด</Button>
+              </div>
+            </div>
+          </Popup>
+        </Marker>;
+      })}
+      {inspection && <InspectionMarker inspection={inspection} onNotify={onNotify}/>}
+      <MapAnnotationTools onNotify={onNotify} onDrawingActiveChange={setDrawingActive}/>
+    </MapContainer>
+  </div>;
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>เข้าสู่ระบบ | DroneAlert</title>
+  <title>D DRONE · เข้าสู่ระบบ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,14 +13,14 @@
     *{box-sizing:border-box} body{font-family:'Noto Sans Thai',sans-serif;background:#f4f7fb;color:#182235}
     .shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 85% 10%,#e7eeff 0,transparent 32%),linear-gradient(135deg,#f9fbff,#eef3f9)}
     .login-card{width:min(440px,100%);background:white;border:1px solid var(--line);border-radius:24px;padding:34px;box-shadow:0 24px 70px rgba(24,34,53,.12)}
-    .brand{display:flex;align-items:center;gap:12px;margin-bottom:26px}.brand-mark{width:48px;height:48px;border-radius:16px;background:var(--navy);display:grid;place-items:center;color:white;font-weight:700}.brand h1{font-size:1.35rem;margin:0;font-weight:700}.brand p{margin:2px 0 0;color:#758198;font-size:.9rem}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:26px}.brand-mark{width:48px;height:48px;border-radius:16px;background:var(--navy);display:grid;place-items:center;color:white;font-weight:700;overflow:hidden}.brand-mark img{width:100%;height:100%;object-fit:cover}.brand h1{font-size:1.35rem;margin:0;font-weight:700}.brand p{margin:2px 0 0;color:#758198;font-size:.9rem}
     .form-control{min-height:50px;border-radius:13px}.btn-primary{min-height:50px;border-radius:13px;background:var(--blue);border:0;font-weight:600}.error-box{display:none}
   </style>
 </head>
 <body>
   <main class="shell">
     <section class="login-card">
-      <div class="brand"><div class="brand-mark">DA</div><div><h1>DroneAlert</h1><p>ศูนย์รับแจ้งเหตุโดรนและอากาศยาน</p></div></div>
+      <div class="brand"><div class="brand-mark" id="loginBrandMark"><span id="loginBrandFallback">DD</span></div><div><h1 id="loginBrandTitle">D DRONE</h1><p id="loginBrandOrganization">ศูนย์ควบคุมและเฝ้าระวังอากาศยาน</p></div></div>
       <h2 class="h4 fw-bold mb-1">เข้าสู่ระบบเจ้าหน้าที่</h2>
       <p class="text-secondary mb-4">กรอกบัญชีที่ได้รับอนุญาต</p>
       <div id="errorBox" class="alert alert-danger error-box"></div>
@@ -32,6 +32,10 @@
     </section>
   </main>
 <script>
+const defaultFavicon='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%230878ff%22/%3E%3Cpath d=%22M18 32h28M32 18v28%22 stroke=%22white%22 stroke-width=%226%22 stroke-linecap=%22round%22/%3E%3C/svg%3E';
+function setFavicon(href){let link=document.querySelector('link[rel="icon"]');if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}link.href=href||defaultFavicon;}
+async function loadBranding(){const branding=await fetch('/api/branding').then(r=>r.json()).catch(()=>({}));const title=branding.app_title||'D DRONE';const org=branding.organization_name||'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน';document.getElementById('loginBrandTitle').textContent=title;document.getElementById('loginBrandOrganization').textContent=org;document.title=`${title} · เข้าสู่ระบบ`;setFavicon(branding.app_logo_url);if(branding.app_logo_url){const img=document.createElement('img');img.src=branding.app_logo_url;img.alt='โลโก้ระบบ';const mark=document.getElementById('loginBrandMark');mark.replaceChildren(img);}}
+loadBranding();
 (async()=>{const me=await fetch('/api/auth/me').then(r=>r.json()).catch(()=>({}));if(me.user)location.href='/dashboard/';})();
 document.getElementById('loginForm').addEventListener('submit',async(e)=>{
   e.preventDefault(); const btn=document.getElementById('submitBtn'); const box=document.getElementById('errorBox'); box.style.display='none'; btn.disabled=true; btn.textContent='กำลังเข้าสู่ระบบ...';

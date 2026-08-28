@@ -5,6 +5,8 @@ const express = require('express');
 const multer = require('multer');
 const pool = require('../config/database');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { createRateLimit } = require('../middleware/rateLimit');
+const { parsePeriod, loadExportData, buildPdf, buildExcel } = require('../services/export-report');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -96,6 +98,17 @@ router.get('/reports', async (req, res, next) => {
     const severity = req.query.severity || null;
     const search = String(req.query.search || '').trim();
     const scope = req.query.scope === 'history' ? 'history' : 'active';
+    const date = String(req.query.date || '').trim();
+    const month = String(req.query.month || '').trim();
+    const from = String(req.query.from || '').trim();
+    const to = String(req.query.to || '').trim();
+    const isValidDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+    if (date && !isValidDate(date)) return res.status(400).json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' });
+    if (from && !isValidDate(from)) return res.status(400).json({ error: 'รูปแบบวันเริ่มต้นไม่ถูกต้อง' });
+    if (to && !isValidDate(to)) return res.status(400).json({ error: 'รูปแบบวันสิ้นสุดไม่ถูกต้อง' });
+    if (from && to && from > to) return res.status(400).json({ error: 'ช่วงวันที่ไม่ถูกต้อง' });
+    if (month && (!/^\d{4}-\d{2}$/.test(month) || Number(month.slice(5)) < 1 || Number(month.slice(5)) > 12)) return res.status(400).json({ error: 'รูปแบบเดือนไม่ถูกต้อง' });
 
     const where = [];
     const params = [];
@@ -103,6 +116,16 @@ router.get('/reports', async (req, res, next) => {
     else where.push("r.status IN ('FALSE_ALARM','RESOLVED','CLOSED')");
     if (status) { where.push('r.status = ?'); params.push(status); }
     if (severity) { where.push('COALESCE(r.operator_severity, r.reporter_severity) = ?'); params.push(severity); }
+    if (date) {
+      where.push('DATE(r.occurred_at) = ?');
+      params.push(date);
+    } else if (from || to) {
+      if (from) { where.push('DATE(r.occurred_at) >= ?'); params.push(from); }
+      if (to) { where.push('DATE(r.occurred_at) <= ?'); params.push(to); }
+    } else if (month) {
+      where.push("DATE_FORMAT(r.occurred_at, '%Y-%m') = ?");
+      params.push(month);
+    }
     if (search) {
       where.push('(r.report_no LIKE ? OR r.location_name LIKE ? OR r.description LIKE ?)');
       const q = `%${search}%`;
@@ -264,6 +287,53 @@ router.post('/reports/:id/notes', requireRole('SUPER_ADMIN', 'OPERATOR'), async 
   }
 });
 
+const geocodeCache = new Map();
+const geocodeRateLimit = createRateLimit({ windowMs: 60 * 1000, max: 30, message: 'ค้นหาสถานที่ถี่เกินไป กรุณารอสักครู่แล้วลองใหม่' });
+router.get('/geocode', geocodeRateLimit, async (req, res, next) => {
+  try {
+    const query = String(req.query.q || '').trim();
+    if (query.length < 2 || query.length > 160) return res.status(400).json({ error: 'กรุณาระบุสถานที่ที่ต้องการค้นหา' });
+    const cacheKey = query.toLocaleLowerCase('th-TH');
+    const cached = geocodeCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return res.json(cached.value);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    let response;
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'jsonv2');
+      url.searchParams.set('limit', '1');
+      url.searchParams.set('addressdetails', '1');
+      url.searchParams.set('accept-language', 'th,en');
+      response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': process.env.GEOCODER_USER_AGENT || 'DroneAlert/0.2 local-operations-dashboard'
+        }
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!response.ok) return res.status(502).json({ error: 'ไม่สามารถค้นหาสถานที่ได้ในขณะนี้' });
+    const rows = await response.json();
+    const item = Array.isArray(rows) ? rows[0] : null;
+    if (!item) return res.status(404).json({ error: 'ไม่พบสถานที่ที่ค้นหา' });
+    const lat = Number(item.lat);
+    const lng = Number(item.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return res.status(502).json({ error: 'ผลการค้นหาสถานที่ไม่ถูกต้อง' });
+    const value = { display_name: String(item.display_name || query), lat, lng };
+    geocodeCache.set(cacheKey, { value, expiresAt: Date.now() + 5 * 60 * 1000 });
+    if (geocodeCache.size > 100) geocodeCache.delete(geocodeCache.keys().next().value);
+    res.json(value);
+  } catch (error) {
+    if (error?.name === 'AbortError') return res.status(504).json({ error: 'การค้นหาสถานที่ใช้เวลานานเกินไป กรุณาลองใหม่' });
+    next(error);
+  }
+});
+
 router.get('/stats', async (req, res, next) => {
   try {
     const [[totals]] = await pool.query(
@@ -276,6 +346,25 @@ router.get('/stats', async (req, res, next) => {
     );
     res.json(totals);
   } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/export/:format', async (req, res, next) => {
+  try {
+    const format = req.params.format;
+    if (!['pdf', 'excel'].includes(format)) return res.status(404).json({ error: 'ไม่พบรูปแบบรายงาน' });
+    const period = parsePeriod(req.query);
+    const data = await loadExportData(period);
+    const isPdf = format === 'pdf';
+    const buffer = isPdf ? await buildPdf(data) : await buildExcel(data);
+    const filename = isPdf ? `Incident-Report-${period.suffix}.pdf` : `Incident-Data-${period.suffix}.xlsx`;
+    res.setHeader('Content-Type', isPdf ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
     next(error);
   }
 });

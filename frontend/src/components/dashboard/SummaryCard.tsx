@@ -2,4 +2,27 @@ import { Activity, AlertTriangle, CalendarDays, Radio } from 'lucide-react';
 import type { Stats } from '../../types';
 import { Card } from '../ui/card';
 
-export function SummaryCard({ stats }: { stats: Stats }) { const items = [{ label: 'เหตุทั้งหมด', value: stats.total, icon: Radio }, { label: 'วันนี้', value: stats.today, icon: CalendarDays }, { label: 'กำลังตรวจสอบ', value: stats.active, icon: Activity }, { label: 'ระดับวิกฤต', value: stats.critical, icon: AlertTriangle, critical: true }]; return <Card className="p-3.5"><div className="flex items-center justify-between"><strong className="text-xs">สรุปสถานการณ์</strong><span className="text-[8px] tracking-[.16em] text-muted">ข้อมูลสด</span></div><div className="mt-3 grid grid-cols-4 gap-1.5">{items.map(({ label, value, icon: Icon, critical }) => <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-2"><div className="flex items-center gap-1"><Icon size={11} className={critical ? 'text-red-500' : 'text-slate-500'} /><strong className={critical ? 'text-lg leading-none text-red-500' : 'text-lg leading-none'}>{value || 0}</strong></div><span className="mt-1.5 block truncate text-[8px] text-muted">{label}</span></div>)}</div></Card>; }
+export function SummaryCard({ stats }: { stats: Stats }) {
+  const items = [
+    { label: 'ทั้งหมด', value: stats.total, icon: Radio },
+    { label: 'วันนี้', value: stats.today, icon: CalendarDays },
+    { label: 'กำลังตรวจ', value: stats.active, icon: Activity },
+    { label: 'วิกฤต', value: stats.critical, icon: AlertTriangle, critical: true },
+  ];
+
+  return <Card className="px-3 py-2.5">
+    <div className="flex items-center justify-between gap-2">
+      <strong className="text-[11px]">สรุปสถานการณ์</strong>
+      <span className="text-[7px] tracking-[.14em] text-muted">LIVE</span>
+    </div>
+    <div className="mt-2 grid grid-cols-4 gap-1.5">
+      {items.map(({ label, value, icon: Icon, critical }) => <div key={label} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/75 px-2 py-1.5">
+        <div className="flex items-center gap-1">
+          <Icon size={10} className={critical ? 'shrink-0 text-red-500' : 'shrink-0 text-slate-500'} />
+          <strong className={critical ? 'text-[15px] leading-none text-red-500' : 'text-[15px] leading-none'}>{value || 0}</strong>
+        </div>
+        <span className="mt-1 block truncate text-[7px] text-muted">{label}</span>
+      </div>)}
+    </div>
+  </Card>;
+}

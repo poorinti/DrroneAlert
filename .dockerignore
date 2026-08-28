@@ -4,4 +4,5 @@ frontend/dist
 .git
 .env
 uploads
+output
 npm-debug.log
