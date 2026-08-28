@@ -5,6 +5,7 @@ frontend/*.tsbuildinfo
 .env
 .env.*
 !.env.example
+.admin-credentials
 uploads/*
 !uploads/.gitkeep
 output/

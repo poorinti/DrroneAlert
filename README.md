@@ -22,36 +22,55 @@
 - แผนที่มีเครื่องมือ Annotation แบบชั่วคราวในเบราว์เซอร์: หมุด, เส้นอิสระ, เส้น, ลูกศร, พื้นที่, สี่เหลี่ยม, วงกลม, ข้อความ, Callout และ Target พร้อมเลือก/ย้ายป้ายข้อความ, ยางลบ, Undo และยืนยันก่อนล้างทั้งหมด
 - ปุ่มออกรายงานบน Navbar สร้าง PDF ภาษาไทยแบบทางการหรือ Excel จริงจาก MySQL รองรับรายวัน รายเดือน และช่วงวันที่ พร้อมสรุปยอด รายละเอียดเหตุ หมายเหตุ Timeline และรายการรูปภาพ
 
-## เริ่มใช้งานในเครื่อง
+## ติดตั้งบน Ubuntu แบบคำสั่งเดียว (พอร์ต 7400)
 
-1. คัดลอก `.env.example` เป็น `.env` และตั้งค่า secret/password ให้เหมาะสม
-2. สร้างและเปิดบริการ
+หลังจาก clone repository ลง Ubuntu แล้ว ให้เข้าโฟลเดอร์โปรเจกต์และรันเพียงคำสั่งเดียว:
 
-   ```bash
-   docker compose up -d --build
-   ```
+```bash
+bash scripts/ubuntu-run.sh
+```
 
-3. สร้างบัญชีผู้ดูแลและกำหนดรหัสผ่านที่ต้องการเอง
+สคริปต์จะทำให้อัตโนมัติ: ตรวจ/ติดตั้ง Docker และ Docker Compose, สร้าง `.env`, สุ่ม Session/Database secrets, เปิด UFW TCP 7400 เมื่อ UFW ทำงานอยู่, build/start Docker stack, รอ health check และสร้างบัญชี Super Admin พร้อมรหัสแบบสุ่ม จากนั้นจะแสดง URL, IP เครื่อง Ubuntu และรหัสผู้ดูแลบนหน้าจอ
 
-   ```bash
-   docker compose exec app npm run create-admin -- admin <your-password>
-   ```
+ระบบ publish เฉพาะ Web entry point ที่ `0.0.0.0:7400` ส่วน MySQL และ application port 3000 ไม่เปิดออกสู่ host โดยตรง และ phpMyAdmin ยังคง bind เฉพาะ `127.0.0.1:8082`
 
-4. สร้างข้อมูล DEMO/TEST ประมาณ 20 เหตุการณ์ โดยไม่ลบข้อมูลเดิม
+เมื่ออัปเดตโค้ดภายหลัง ใช้:
 
-   ```bash
-   docker compose exec app npm run seed-demo
-   ```
+```bash
+git pull
+bash scripts/ubuntu-run.sh
+```
 
-   สคริปต์จะไม่เพิ่มข้อมูลซ้ำ หากพบรายงาน `DEMO-` ครบชุดอยู่แล้ว แต่จะรีเฟรชเฉพาะวัน/เวลาของข้อมูล DEMO ให้กระจายหลายวันและหลายเดือนสำหรับทดสอบตัวกรอง โดยไม่ลบหรือแตะข้อมูลจริง
+ค่าหลักสำหรับการ deploy อยู่ใน `.env`:
 
-## URLs
+```env
+PUBLIC_BIND=0.0.0.0
+PUBLIC_PORT=7400
+SESSION_COOKIE_SECURE=false
+```
 
-- [แบบฟอร์มแจ้งเหตุ](http://localhost/report/)
-- [เข้าสู่ระบบเจ้าหน้าที่](http://localhost/login/)
-- [Dashboard ศูนย์บัญชาการ](http://localhost/dashboard/)
-- [Health check](http://localhost/api/health)
-- phpMyAdmin: `http://127.0.0.1:8082` (เข้าถึงได้จากเครื่อง Server เท่านั้นตามค่าเริ่มต้น)
+`SESSION_COOKIE_SECURE=false` ใช้สำหรับการเข้าผ่าน `http://IP:7400` โดยตรง ถ้าภายหลังมี HTTPS/reverse proxy ที่ส่ง HTTPS มาถึง Caddy ให้เปลี่ยนเป็น `true`
+
+### MikroTik Port Forward
+
+Forward TCP จาก WAN port `7400` ไปยัง `UBUNTU_LAN_IP:7400` ตัวอย่างเช่น Ubuntu มี IP `192.168.88.20` ให้ตั้ง dst-nat เป็น `TCP 7400 -> 192.168.88.20:7400`
+
+> การ forward แบบนี้เป็น HTTP และข้อมูล login จะไม่ถูกเข้ารหัสบนอินเทอร์เน็ต ถ้าใช้งานนอกเครือข่ายจริงเป็นระยะยาว ควรวาง HTTPS/VPN ด้านหน้า
+
+## เริ่มใช้งานแบบ Manual / Development
+
+1. คัดลอก `.env.example` เป็น `.env`
+2. สร้างและเปิดบริการด้วย `docker compose up -d --build`
+3. สร้างผู้ดูแลด้วย `docker compose exec app npm run create-admin -- admin <your-password>`
+4. ถ้าต้องการข้อมูล DEMO/TEST ใช้ `docker compose exec app npm run seed-demo` โดยสคริปต์จะไม่ลบข้อมูลจริง
+
+## URLs บน Ubuntu
+
+- แบบฟอร์มแจ้งเหตุ: `http://UBUNTU_LAN_IP:7400/report/`
+- เข้าสู่ระบบเจ้าหน้าที่: `http://UBUNTU_LAN_IP:7400/login/`
+- Dashboard: `http://UBUNTU_LAN_IP:7400/dashboard/`
+- Health check: `http://UBUNTU_LAN_IP:7400/api/health`
+- phpMyAdmin: `http://127.0.0.1:8082` (เฉพาะเครื่อง Server)
 
 ## คำสั่งตรวจสอบ
 

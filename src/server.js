@@ -19,13 +19,18 @@ const io = new Server(server, {
   cors: { origin: false }
 });
 
+const secureCookieEnv = process.env.SESSION_COOKIE_SECURE;
+const secureSessionCookie = secureCookieEnv == null
+  ? process.env.NODE_ENV === 'production'
+  : /^(1|true|yes)$/i.test(secureCookieEnv);
+
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'dev-only-change-me',
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: secureSessionCookie,
     sameSite: 'lax',
     maxAge: 8 * 60 * 60 * 1000
   }
