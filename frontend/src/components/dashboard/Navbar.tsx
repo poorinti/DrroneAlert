@@ -117,10 +117,29 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
 
     <div className="navbar-mobile-actions ml-auto items-center gap-1.5">
       <Button asChild size="icon" className="h-10 w-10 shrink-0 rounded-xl bg-blue-600 text-white shadow-sm hover:bg-blue-700"><a href="/report/" aria-label="ลงข้อมูลเหตุ"><Plus size={18}/></a></Button>
-      <Button variant="secondary" size="icon" className="relative h-10 w-10 rounded-xl bg-white/90" onClick={onMobilePanel} aria-label="เปิดข้อมูลและเมนู">
-        <MoreHorizontal size={20}/>
-        {unread.length > 0 && <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[8px] font-bold text-white">{unread.length > 9 ? '9+' : unread.length}</span>}
-      </Button>
+
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <Button variant="secondary" size="icon" className="relative h-10 w-10 rounded-xl bg-white/90" aria-label="การแจ้งเตือน">
+            <Bell size={18}/>
+            {unread.length > 0 && <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[8px] font-bold text-white">{unread.length > 9 ? '9+' : unread.length}</span>}
+          </Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content align="end" sideOffset={8} className="z-[3000] w-[min(288px,calc(100vw-24px))] rounded-[18px] border border-white/80 bg-white/95 p-2 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center justify-between px-2 py-1.5"><strong className="text-[11px] text-slate-900">แจ้งเตือนล่าสุด</strong>{unread.length > 0 && <button onClick={onReadAll} className="text-[9px] font-semibold text-primary">อ่านทั้งหมด</button>}</div>
+            {unread.length ? unread.slice(0, 5).map((report) => {
+              const severity = severityOf(report);
+              return <DropdownMenu.Item key={report.id} onSelect={() => onNotification(report)} className="flex cursor-pointer gap-2 rounded-[13px] px-2 py-2 outline-none transition hover:bg-blue-50 focus:bg-blue-50">
+                <i className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                <div className="min-w-0 flex-1"><div className="flex items-center gap-1"><strong className="truncate text-[10px] text-slate-900">{report.report_no}</strong><Badge tone={severity}>{severityLabels[severity]}</Badge></div><p className="mt-0.5 truncate text-[9px] text-slate-600">{report.location_name || 'ไม่ระบุสถานที่'}</p><span className="text-[8px] text-muted">{timeAgo(report.submitted_at)}</span></div>
+              </DropdownMenu.Item>;
+            }) : <p className="px-3 py-5 text-center text-[10px] text-muted">ไม่มีการแจ้งเตือนใหม่</p>}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+
+      <Button variant="secondary" size="icon" className="h-10 w-10 rounded-xl bg-white/90" onClick={onMobilePanel} aria-label="เปิดข้อมูลและเมนู"><MoreHorizontal size={20}/></Button>
     </div>
   </header>
   {liveCoordinate && <div className="mobile-gps-pill fixed right-3 top-[84px] z-[880] flex items-center gap-1.5 rounded-full border border-white/80 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-slate-600 shadow-lg backdrop-blur-md lg:hidden" title="พิกัดที่กำลังตรวจสอบ"><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="tabular-nums">{coordinateText}</span></div>}

@@ -74,7 +74,7 @@
           <input type="hidden" name="incidentLat" id="incidentLat"><input type="hidden" name="incidentLng" id="incidentLng"><input type="hidden" name="reporterLat" id="reporterLat"><input type="hidden" name="reporterLng" id="reporterLng"><input type="hidden" name="gpsAccuracyM" id="gpsAccuracyM">
           <div class="map-hint">แตะบนแผนที่เพื่อปักหมุด หรือกดค้างแล้วลากหมุดเพื่อแก้ตำแหน่ง</div>
         </div>
-        <div class="step-actions justify-content-end"><button type="button" class="btn btn-primary btn-lg px-4" data-next>ถัดไป: รายละเอียด →</button></div>
+        <div class="step-actions justify-content-end"><button type="button" class="btn step-next-btn" data-next>ถัดไป: รายละเอียด <span aria-hidden="true">→</span></button></div>
       </section>
 
       <section class="form-step" data-step="2">
@@ -93,7 +93,7 @@
             <div class="col-12"><label class="form-label">รายละเอียดเพิ่มเติม</label><textarea class="form-control" name="description" rows="4" placeholder="อธิบายเหตุการณ์เพิ่มเติม เช่น บินวนอยู่กี่นาที เคลื่อนที่ไปทางใด หรือมีพฤติกรรมผิดปกติอย่างไร"></textarea></div>
           </div>
         </div>
-        <div class="step-actions"><button type="button" class="btn btn-outline-secondary btn-lg" data-prev>← ย้อนกลับ</button><button type="button" class="btn btn-primary btn-lg" data-next>ถัดไป: หลักฐาน →</button></div>
+        <div class="step-actions"><button type="button" class="btn step-back-btn" data-prev><span aria-hidden="true">←</span> ย้อนกลับ</button><button type="button" class="btn step-next-btn" data-next>ถัดไป: หลักฐาน <span aria-hidden="true">→</span></button></div>
       </section>
 
       <section class="form-step" data-step="3">
@@ -104,7 +104,7 @@
         </div>
         <div class="section-card mt-3 review-card"><div class="section-heading mb-3"><div><span class="section-number">05</span><h2>ตรวจสอบก่อนส่ง</h2></div><p>ตรวจข้อมูลอีกครั้งก่อนส่งเข้าศูนย์รับแจ้ง</p></div><div class="review-grid" id="reviewSummary"></div></div>
         <div id="formAlert" class="alert d-none mt-3" role="alert"></div>
-        <div class="step-actions"><button type="button" class="btn btn-outline-secondary btn-lg" data-prev>← ย้อนกลับ</button><button type="submit" class="btn btn-danger btn-lg submit-btn" id="submitBtn">ส่งรายงานเหตุ</button></div>
+        <div class="step-actions"><button type="button" class="btn step-back-btn" data-prev><span aria-hidden="true">←</span> ย้อนกลับ</button><button type="submit" class="btn step-submit-btn submit-btn" id="submitBtn">ส่งรายงานเหตุ</button></div>
       </section>
     </form>
 

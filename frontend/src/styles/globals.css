@@ -128,7 +128,7 @@
   .mobile-sheet-handle { width: 42px; height: 4px; flex: 0 0 auto; align-self: center; margin: 9px 0 4px; border-radius: 999px; background: #cbd5e1; }
   .mobile-sheet-header { display: flex; min-height: 50px; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px 9px; border-bottom: 1px solid rgba(226,232,240,.82); }
   .mobile-sheet-close { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; color: #334155; }
-  .mobile-sheet-scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 10px 10px 12px; scrollbar-width: thin; }
+  .mobile-sheet-scroll { min-width: 0; min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 10px 10px 12px; scrollbar-width: thin; }
   .mobile-sheet-search { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 8px; min-height: 46px; border: 1px solid #dbe4ec; border-radius: 15px; background: #f8fafc; padding: 5px 6px 5px 12px; }
   .mobile-sheet-search input { min-width: 0; border: 0; background: transparent; color: #172033; font-size: 12px; font-weight: 600; outline: 0; }
   .mobile-sheet-search input::placeholder { color: #94a3b8; font-weight: 500; }
@@ -139,9 +139,19 @@
   .mobile-map-select select { min-width: 0; max-width: 100%; flex: 1; border: 0; background: transparent; color: #334155; font-size: 10px; font-weight: 800; outline: 0; }
   .mobile-sheet-section { margin-top: 8px; }
   .mobile-sheet-section > * { width: 100%; }
-  .mobile-sheet-report-list { margin-top: 8px; min-height: 0; max-height: none; }
-  .mobile-sheet-report-list .dashboard-panel-surface { overflow: visible; }
-  .mobile-sheet-report-list .dashboard-report-scroll { overflow: visible; }
+  .mobile-sheet-report-list { margin-top: 8px; min-width: 0; min-height: 0; max-width: 100%; max-height: none; overflow: hidden; }
+  .mobile-sheet-report-list .dashboard-panel-surface { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; }
+  .mobile-sheet-report-list .dashboard-report-scroll { width: 100%; min-width: 0; max-width: 100%; overflow-x: hidden; overflow-y: visible; }
+  .mobile-sheet-report-list .report-list-header { align-items: flex-start; gap: 8px; }
+  .mobile-sheet-report-list .report-list-heading { flex: 1; min-width: 0; }
+  .mobile-sheet-report-list .report-list-description { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+  .mobile-sheet-report-list .report-list-count { flex: 0 0 auto; white-space: nowrap; }
+  .mobile-sheet-report-list .report-list-card { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; }
+  .mobile-sheet-report-list .report-list-location { align-items: flex-start; }
+  .mobile-sheet-report-list .report-list-location span { min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
+  .mobile-sheet-report-list .report-list-meta { flex-wrap: wrap; align-items: flex-start; }
+  .mobile-sheet-report-list .report-list-meta > span { max-width: 100%; }
+  .mobile-sheet-report-list .report-list-meta > span:last-child { margin-left: 0; }
   .mobile-sheet-account { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 7px; margin-top: 8px; border-top: 1px solid #e2e8f0; padding: 10px 2px 2px; }
   .mobile-sheet-account button { display: inline-flex; min-height: 38px; align-items: center; gap: 5px; border: 1px solid #dbe4ec; border-radius: 11px; background: #fff; padding: 0 9px; color: #475569; font-size: 9px; font-weight: 800; }
   .mobile-sheet-account button.danger { border-color: #fecaca; background: #fff7f7; color: #dc2626; }
