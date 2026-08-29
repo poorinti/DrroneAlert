@@ -13,10 +13,10 @@ const severityOptions = Object.entries(severityLabels).map(([value, label]) => (
 const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
 
 function Row({ label, value }: { label: string; value?: React.ReactNode }) {
-  return <div className="grid grid-cols-[116px_minmax(0,1fr)] gap-3 py-1.5 text-[11px]"><span className="text-muted">{label}</span><span>{value || '-'}</span></div>;
+  return <div className="detail-row grid min-w-0 max-w-full grid-cols-[116px_minmax(0,1fr)] gap-3 py-1.5 text-[11px]"><span className="text-muted">{label}</span><span className="detail-wrap min-w-0 max-w-full">{value || '-'}</span></div>;
 }
 function Timeline({ title, body, meta }: { title: string; body?: string; meta: string }) {
-  return <div className="timeline-item relative pb-4 pl-5 text-[10px]"><i className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white"/><strong>{title}</strong>{body && <p className="my-0.5 text-slate-600">{body}</p>}<span className="text-[8px] text-muted">{meta}</span></div>;
+  return <div className="timeline-item relative min-w-0 max-w-full overflow-hidden pb-4 pl-5 text-[10px]"><i className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white"/><strong className="detail-wrap block min-w-0 max-w-full">{title}</strong>{body && <p className="detail-wrap my-0.5 min-w-0 max-w-full text-slate-600">{body}</p>}<span className="detail-wrap block min-w-0 max-w-full text-[8px] text-muted">{meta}</span></div>;
 }
 
 export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote, onComplete }: {
@@ -72,23 +72,23 @@ export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote
 
   return <>
     <AnimatePresence>
-      {open && <motion.aside initial={{ x: '105%', opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: '105%', opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 34 }} className="fixed bottom-3 right-3 top-[88px] z-[1200] w-[min(450px,calc(100vw-24px))] overflow-hidden rounded-[26px] border border-white/80 bg-white/95 shadow-2xl backdrop-blur-2xl">
+      {open && <motion.aside initial={{ x: '105%', opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: '105%', opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 34 }} className="detail-sheet fixed bottom-3 right-3 top-[88px] z-[1200] w-[min(450px,calc(100vw-24px))] max-w-[calc(100vw-24px)] overflow-hidden rounded-[26px] border border-white/80 bg-white/95 shadow-2xl backdrop-blur-2xl">
         <button onClick={onClose} className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-slate-600 shadow-lg" aria-label="ปิดรายละเอียด"><X size={17}/></button>
-        <div className="h-full overflow-y-auto">
+        <div className="detail-sheet-scroll h-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto">
           {loading || !report ? <div className="grid h-full place-items-center text-xs text-muted">กำลังโหลดรายละเอียด...</div> : <>
             <div className="h-60 bg-slate-100">{images[0] ? <img className="h-full w-full object-cover" src={`/uploads/${images[0].file_path}`} alt="ภาพเหตุการณ์"/> : <div className="grid h-full place-items-center text-slate-300"><Camera size={42}/></div>}</div>
-            <div className="p-5">
+            <div className="detail-sheet-body min-w-0 max-w-full overflow-hidden p-5">
               <Badge tone={report.operator_severity || report.reporter_severity}>{severityLabels[report.operator_severity || report.reporter_severity]}</Badge>
-              <h2 className="mt-2 text-xl font-bold">{report.report_no}</h2>
-              <div className="mt-1 flex gap-2"><Badge tone="blue">{statusLabels[report.status]}</Badge><span className="text-[10px] text-muted">{formatDate(report.submitted_at)}</span></div>
+              <h2 className="detail-wrap mt-2 max-w-full text-xl font-bold">{report.report_no}</h2>
+              <div className="detail-header-meta mt-1 flex min-w-0 max-w-full flex-wrap gap-2"><Badge tone="blue">{statusLabels[report.status]}</Badge><span className="detail-wrap min-w-0 text-[10px] text-muted">{formatDate(report.submitted_at)}</span></div>
 
               <section className="detail-section">
                 <h3>ข้อมูลสำคัญ</h3>
                 <Row label="สิ่งที่พบ" value={objectLabels[report.object_type]}/>
-                <Row label="สถานที่" value={<span className="inline-flex gap-1"><MapPin size={12} className="text-primary"/>{report.location_name}</span>}/>
+                <Row label="สถานที่" value={<span className="detail-wrap inline-flex min-w-0 max-w-full items-start gap-1"><MapPin size={12} className="mt-0.5 shrink-0 text-primary"/><span className="detail-wrap min-w-0">{report.location_name}</span></span>}/>
                 <Row label="เวลาที่พบ" value={formatDate(report.occurred_at)}/>
-                <Row label="พิกัด GPS" value={hasIncidentCoordinate ? <a href={incidentGoogleMapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 font-bold tabular-nums text-blue-700 transition hover:border-blue-300 hover:bg-blue-100" title="เปิดพิกัดนี้ใน Google Maps"><MapPin size={12} className="shrink-0"/>{incidentCoordinate}<ExternalLink size={11} className="shrink-0"/></a> : '-'}/>
-                <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-[11px] leading-relaxed">{report.description || report.appearance_notes || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
+                <Row label="พิกัด GPS" value={hasIncidentCoordinate ? <a href={incidentGoogleMapsUrl} target="_blank" rel="noopener noreferrer" className="detail-gps-link inline-flex min-w-0 max-w-full flex-wrap items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 font-bold tabular-nums text-blue-700 transition hover:border-blue-300 hover:bg-blue-100" title="เปิดพิกัดนี้ใน Google Maps"><MapPin size={12} className="shrink-0"/><span className="detail-wrap min-w-0">{incidentCoordinate}</span><ExternalLink size={11} className="shrink-0"/></a> : '-'}/>
+                <p className="detail-wrap mt-3 min-w-0 max-w-full rounded-2xl bg-slate-50 p-3 text-[11px] leading-relaxed">{report.description || report.appearance_notes || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
               </section>
 
               <section className="detail-section">
