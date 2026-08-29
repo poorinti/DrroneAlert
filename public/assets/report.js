@@ -106,6 +106,7 @@
       el.classList.toggle('active', n === currentStep);
       el.classList.toggle('done', n < currentStep);
     });
+    document.getElementById('aiSmartCard')?.classList.toggle('d-none', currentStep !== 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (currentStep === 3) buildReview();
   }
