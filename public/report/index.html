@@ -67,7 +67,7 @@
             <div class="col-12 col-md-6"><label class="form-label">วัน / เวลาที่ตรวจพบ <span class="required">*</span></label><input class="form-control form-control-lg" type="datetime-local" id="occurredAt" name="occurredAt" required></div>
             <div class="col-12 col-md-6"><label class="form-label">ชื่อสถานที่</label><input class="form-control form-control-lg" id="locationName" name="locationName" placeholder="เช่น บริเวณสนามกีฬา / บ้านเลขที่ / จุดสังเกต"></div>
           </div>
-          <div class="map-toolbar mt-3"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-dark btn-lg" id="locateBtn">⌖ ใช้ตำแหน่งของฉัน</button><button type="button" class="btn btn-outline-primary btn-lg" id="searchPlaceBtn">⌕ ค้นหาสถานที่</button></div><div class="coordinate-chip" id="coordinateText">ยังไม่ได้ปักตำแหน่ง</div></div>
+          <div class="map-toolbar mt-3"><div class="report-location-actions"><button type="button" class="btn btn-dark location-action-btn" id="locateBtn">⌖ ใช้ตำแหน่งของฉัน</button><button type="button" class="btn btn-outline-primary location-action-btn" id="searchPlaceBtn">⌕ ค้นหาสถานที่</button></div><div class="coordinate-chip" id="coordinateText">ยังไม่ได้ปักตำแหน่ง</div></div>
           <div id="placeSearchStatus" class="place-search-status d-none"></div>
           <div id="placeSearchResults" class="place-search-results d-none"></div>
           <div id="reportMap" class="report-map mt-3" aria-label="แผนที่เลือกตำแหน่ง"></div>
