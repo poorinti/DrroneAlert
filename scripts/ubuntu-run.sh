@@ -105,7 +105,16 @@ prepare_env() {
   set_env DB_USER dronealert
   set_env UPLOAD_DIR /app/uploads
 
+  local gemini_model gemini_limit
+  gemini_model="$(get_env GEMINI_MODEL)"
+  gemini_limit="$(get_env AI_SMART_FILL_MAX_PER_10MIN)"
+  if [[ -z "$gemini_model" || "$gemini_model" == "gemini-2.5-flash-lite" || "$gemini_model" == "gemini-2.5-flash" ]]; then
+    set_env GEMINI_MODEL gemini-3.5-flash-lite
+  fi
+  [[ -n "$gemini_limit" ]] || set_env AI_SMART_FILL_MAX_PER_10MIN 12
+
   ensure_secret SESSION_SECRET change-this-to-a-long-random-secret 48
+  ensure_secret SETTINGS_ENCRYPTION_KEY change-this-settings-encryption-key 48
   ensure_secret DB_PASSWORD change-this-password 24
   ensure_secret DB_ROOT_PASSWORD change-this-root-password 24
 }

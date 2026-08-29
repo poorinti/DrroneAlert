@@ -7,6 +7,7 @@ const pool = require('../config/database');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { createRateLimit } = require('../middleware/rateLimit');
 const { parsePeriod, loadExportData, buildPdf, buildExcel } = require('../services/export-report');
+const { saveGeminiApiKey, geminiKeyStatus } = require('../services/secret-settings');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -72,6 +73,10 @@ router.get('/settings', async (req, res, next) => {
     const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path','navbar_surface_mode','navbar_surface_color','panel_surface_mode','panel_surface_color')");
     const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '', navbar_surface_mode: 'white', navbar_surface_color: '#dbeafe', panel_surface_mode: 'white', panel_surface_color: '#ffffff' };
     for (const row of rows) settings[row.setting_key] = row.setting_value || '';
+    const aiStatus = await geminiKeyStatus();
+    settings.gemini_api_key_configured = aiStatus.configured;
+    settings.gemini_api_key_updated_at = aiStatus.updatedAt;
+    settings.gemini_model = (['gemini-2.5-flash-lite','gemini-2.5-flash'].includes(process.env.GEMINI_MODEL) ? 'gemini-3.5-flash-lite' : (process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'));
     res.json(settings);
   } catch (error) { next(error); }
 });
@@ -85,6 +90,7 @@ router.post('/settings', requireRole('SUPER_ADMIN'), brandingUpload.fields([{ na
     const navbarSurfaceColor = String(req.body.navbarSurfaceColor || '#dbeafe').trim().toLowerCase();
     const panelSurfaceMode = String(req.body.panelSurfaceMode || 'white').trim();
     const panelSurfaceColor = String(req.body.panelSurfaceColor || '#ffffff').trim().toLowerCase();
+    const geminiApiKey = String(req.body.geminiApiKey || '').trim();
     if (!appTitle || appTitle.length > 100 || organizationName.length > 160) {
       for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
       return res.status(400).json({ error: 'กรุณาระบุชื่อโครงการไม่เกิน 100 ตัวอักษร และชื่อหน่วยงานไม่เกิน 160 ตัวอักษร' });
@@ -92,6 +98,10 @@ router.post('/settings', requireRole('SUPER_ADMIN'), brandingUpload.fields([{ na
     if (!allowedSurfaceModes.has(navbarSurfaceMode) || !allowedSurfaceModes.has(panelSurfaceMode) || !isHexColor(navbarSurfaceColor) || !isHexColor(panelSurfaceColor)) {
       for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
       return res.status(400).json({ error: 'รูปแบบสี Dashboard ไม่ถูกต้อง' });
+    }
+    if (geminiApiKey && (geminiApiKey.length < 20 || geminiApiKey.length > 512)) {
+      for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});
+      return res.status(400).json({ error: 'Gemini API key ไม่ถูกต้อง' });
     }
     const primaryFile = req.files?.logo?.[0];
     const secondaryFile = req.files?.secondaryLogo?.[0];
@@ -105,10 +115,18 @@ router.post('/settings', requireRole('SUPER_ADMIN'), brandingUpload.fields([{ na
     await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('panel_surface_color', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [panelSurfaceColor]);
     if (relativeLogoPath) await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('app_logo_path', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [relativeLogoPath]);
     if (relativeSecondaryLogoPath) await pool.execute(`INSERT INTO app_settings (setting_key, setting_value) VALUES ('secondary_logo_path', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`, [relativeSecondaryLogoPath]);
+    if (geminiApiKey) {
+      await saveGeminiApiKey(geminiApiKey);
+      await pool.execute(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, user_agent) VALUES (?, 'GEMINI_API_KEY_UPDATED', 'APP_SETTINGS', 'gemini', ?, ?)`, [req.session.user.id, req.ip, req.get('user-agent') || null]);
+    }
     await pool.execute(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, user_agent) VALUES (?, 'BRANDING_UPDATED', 'APP_SETTINGS', 'branding', ?, ?)`, [req.session.user.id, req.ip, req.get('user-agent') || null]);
     const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path','navbar_surface_mode','navbar_surface_color','panel_surface_mode','panel_surface_color')");
     const settings = { app_title: 'D DRONE', organization_name: 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน', app_logo_path: '', secondary_logo_path: '', navbar_surface_mode: 'white', navbar_surface_color: '#dbeafe', panel_surface_mode: 'white', panel_surface_color: '#ffffff' };
     for (const row of rows) settings[row.setting_key] = row.setting_value || '';
+    const aiStatus = await geminiKeyStatus();
+    settings.gemini_api_key_configured = aiStatus.configured;
+    settings.gemini_api_key_updated_at = aiStatus.updatedAt;
+    settings.gemini_model = (['gemini-2.5-flash-lite','gemini-2.5-flash'].includes(process.env.GEMINI_MODEL) ? 'gemini-3.5-flash-lite' : (process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'));
     res.json(settings);
   } catch (error) {
     for (const files of Object.values(req.files || {})) for (const file of files) fs.unlink(file.path, () => {});

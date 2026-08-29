@@ -9,6 +9,24 @@
 - Backend: Node.js + Express + MySQL 8 + Express Session + Socket.IO
 - Deployment: Docker Compose + Caddy + phpMyAdmin + Docker Volume สำหรับ `/uploads`
 - LINE: เตรียม LIFF แล้ว แต่ยังไม่รวมการตั้งค่า LINE จริงในโปรเจกต์นี้
+- AI Smart Fill: ใช้ Gemini API เพื่ออ่านข้อความธรรมชาติแล้วแยกลงช่องแบบฟอร์ม โดย API key เก็บเฉพาะ Backend
+
+## AI Smart Fill (Gemini Free Tier)
+
+หน้า `/report/` มีช่อง AI Smart Fill สำหรับพิมพ์/วางข้อมูลรวม ๆ แล้วให้ Gemini แยกเป็น field ของแบบฟอร์มเดิม ผู้ใช้ยังต้องตรวจ/แก้และกดส่งเอง AI ไม่บันทึกรายงานโดยอัตโนมัติ และจะไม่เดาพิกัด GPS จากชื่อสถานที่
+
+ตั้งค่า Gemini API key จาก Dashboard ด้วยบัญชี Super Admin ที่ `ตั้งค่าระบบ → Gemini API Key` ได้โดยตรง ระบบไม่ส่งค่าเดิมกลับไปยัง Browser และ key ใหม่จะถูกเข้ารหัสก่อนเก็บ หากต้องเปลี่ยน key ให้วางค่าใหม่แล้วบันทึกทับได้ทันที
+
+ค่าระบบที่ยังตั้งผ่าน `.env` ได้คือ:
+
+```env
+GEMINI_MODEL=gemini-3.5-flash-lite
+AI_SMART_FILL_MAX_PER_10MIN=12
+```
+
+`GEMINI_API_KEY` ใน `.env` ยังรองรับเป็น fallback สำหรับผู้ดูแล server แต่ไม่จำเป็นสำหรับการติดตั้งปกติ
+
+> Free Tier ของ Gemini อาจนำเนื้อหาที่ส่งไปใช้เพื่อปรับปรุงผลิตภัณฑ์ของ Google จึงไม่ควรส่งข้อมูลลับ/ข้อมูลชั้นความลับผ่าน AI Smart Fill
 
 ## ความสามารถของ Dashboard
 
@@ -30,7 +48,13 @@
 bash scripts/ubuntu-run.sh
 ```
 
-สคริปต์จะทำให้อัตโนมัติ: ตรวจ/ติดตั้ง Docker และ Docker Compose, สร้าง `.env`, สุ่ม Session/Database secrets, เปิด UFW TCP 7400 เมื่อ UFW ทำงานอยู่, build/start Docker stack, รอ health check และสร้างบัญชี Super Admin พร้อมรหัสแบบสุ่ม จากนั้นจะแสดง URL, IP เครื่อง Ubuntu และรหัสผู้ดูแลบนหน้าจอ
+สคริปต์จะทำให้อัตโนมัติ: ตรวจ/ติดตั้ง Docker และ Docker Compose, สร้าง `.env`, สุ่ม Session/Database/Settings encryption secrets, เปิด UFW TCP 7400 เมื่อ UFW ทำงานอยู่, build/start Docker stack, รอ health check และสร้างบัญชี Super Admin พร้อมรหัสแบบสุ่ม จากนั้นจะแสดง URL, IP เครื่อง Ubuntu และรหัสผู้ดูแลบนหน้าจอ
+
+### Gemini AI Smart Fill
+
+หลังติดตั้ง **ไม่ต้องแก้ `.env` เพื่อใส่ Gemini API key** ให้เข้า Dashboard ด้วย Super Admin → `ตั้งค่าระบบ` → `Gemini API Key` → วาง key → บันทึก ระบบจะเก็บ key แบบเข้ารหัสและหน้าเว็บจะไม่สามารถอ่าน key เดิมกลับมาได้ ถ้า key หมดหรือเปลี่ยน key ให้ลูกค้าวาง key ใหม่ในช่องเดิมแล้วบันทึกเพื่อแทนค่าของเดิมได้ทันที
+
+`.env` ยังรองรับ `GEMINI_API_KEY` เป็น fallback สำหรับผู้ดูแล server เดิม แต่ key ที่บันทึกจาก Dashboard จะถูกใช้ก่อนค่าใน `.env`
 
 ระบบ publish เฉพาะ Web entry point ที่ `0.0.0.0:7400` ส่วน MySQL และ application port 3000 ไม่เปิดออกสู่ host โดยตรง และ phpMyAdmin ยังคง bind เฉพาะ `127.0.0.1:8082`
 

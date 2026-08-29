@@ -11,6 +11,11 @@
   const alertBox = document.getElementById('formAlert');
   const submitBtn = document.getElementById('submitBtn');
   const reviewSummary = document.getElementById('reviewSummary');
+  const aiSmartText = document.getElementById('aiSmartText');
+  const aiSmartBtn = document.getElementById('aiSmartBtn');
+  const aiSmartStatus = document.getElementById('aiSmartStatus');
+  const aiSmartResult = document.getElementById('aiSmartResult');
+  const aiSmartModel = document.getElementById('aiSmartModel');
   let currentStep = 1;
   let selectedFiles = [];
   let map;
@@ -116,6 +121,132 @@
     document.querySelectorAll('.object-card').forEach((card) => {
       card.classList.toggle('selected', card.querySelector('input').checked);
     });
+  }
+
+  const aiFieldLabels = {
+    reporterType: 'ประเภทผู้รายงาน', reporterName: 'ชื่อผู้รายงาน', organization: 'หน่วยงาน', phone: 'เบอร์โทร', email: 'อีเมล',
+    occurredAt: 'วัน/เวลา', locationName: 'ชื่อสถานที่', incidentLat: 'พิกัด', incidentLng: 'พิกัด', objectType: 'ประเภทที่พบ',
+    direction: 'ทิศทาง', speedEstimate: 'ความเร็ว', altitudeEstimate: 'ความสูง', distanceEstimate: 'ระยะห่าง', objectCount: 'จำนวน',
+    reporterSeverity: 'ความเร่งด่วน', appearanceNotes: 'ลักษณะที่พบ', description: 'รายละเอียดเพิ่มเติม'
+  };
+
+  function markAiFilled(control) {
+    const target = control.type === 'radio' ? control.closest('.choice-card, .object-card') : control;
+    if (!target) return;
+    target.classList.add('ai-filled');
+    if (!control.dataset.aiHighlightBound) {
+      const clear = () => target.classList.remove('ai-filled');
+      control.addEventListener('input', clear);
+      control.addEventListener('change', clear);
+      control.dataset.aiHighlightBound = '1';
+    }
+  }
+
+  function setSmartField(name, value) {
+    if (value === undefined || value === null || value === '') return false;
+    const controls = [...form.querySelectorAll(`[name="${name}"]`)];
+    if (!controls.length) return false;
+
+    if (controls[0].type === 'radio') {
+      const chosen = controls.find((control) => control.value === String(value));
+      if (!chosen) return false;
+      chosen.checked = true;
+      chosen.dispatchEvent(new Event('change', { bubbles: true }));
+      markAiFilled(chosen);
+      return true;
+    }
+
+    const control = controls[0];
+    if (control.readOnly || control.disabled) return false;
+    control.value = String(value);
+    control.dispatchEvent(new Event('input', { bubbles: true }));
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+    markAiFilled(control);
+    return true;
+  }
+
+  function applySmartFields(fields = {}) {
+    const applied = [];
+    const coordinateKeys = new Set(['incidentLat', 'incidentLng']);
+    Object.entries(fields).forEach(([name, value]) => {
+      if (coordinateKeys.has(name)) return;
+      if (setSmartField(name, value)) applied.push(name);
+    });
+
+    const lat = Number(fields.incidentLat);
+    const lng = Number(fields.incidentLng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      setIncidentPoint(lat, lng, true);
+      applied.push('incidentLat', 'incidentLng');
+    }
+
+    setReporterTypeUI();
+    setObjectTypeUI();
+    if (currentStep === 3) buildReview();
+    return [...new Set(applied)];
+  }
+
+  async function initAiSmartFill() {
+    try {
+      const response = await fetch('/api/ai/config');
+      const data = await response.json().catch(() => ({}));
+      aiSmartModel.textContent = data.model || 'Gemini Free Tier';
+      if (response.ok && data.enabled) {
+        aiSmartBtn.disabled = false;
+        aiSmartStatus.className = 'ai-smart-status ready';
+        aiSmartStatus.textContent = 'พร้อมใช้งาน · API key อยู่บนเซิร์ฟเวอร์ ไม่ส่งมาที่หน้าเว็บ';
+      } else {
+        aiSmartBtn.disabled = true;
+        aiSmartStatus.className = 'ai-smart-status error';
+        aiSmartStatus.textContent = 'ยังไม่ได้ตั้งค่า Gemini API key บนเซิร์ฟเวอร์';
+      }
+    } catch (_) {
+      aiSmartBtn.disabled = true;
+      aiSmartStatus.className = 'ai-smart-status error';
+      aiSmartStatus.textContent = 'ตรวจสอบสถานะ AI ไม่สำเร็จ';
+    }
+  }
+
+  async function runAiSmartFill() {
+    const text = aiSmartText.value.trim();
+    if (text.length < 3) return fail('กรุณาพิมพ์รายละเอียดที่ต้องการให้ AI แยกข้อมูล');
+
+    aiSmartBtn.disabled = true;
+    aiSmartBtn.textContent = 'กำลังแยกข้อมูล...';
+    aiSmartStatus.className = 'ai-smart-status';
+    aiSmartStatus.textContent = 'Gemini กำลังอ่านและจัดข้อมูลลงช่อง...';
+    aiSmartResult.classList.add('d-none');
+    aiSmartResult.textContent = '';
+
+    try {
+      const response = await fetch('/api/ai/smart-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'AI Smart Fill ไม่สำเร็จ');
+
+      const applied = applySmartFields(data.fields || {});
+      const labels = [...new Set(applied.map((key) => aiFieldLabels[key]).filter(Boolean))];
+      const messages = [];
+      if (labels.length) messages.push(`เติมให้แล้ว ${labels.length} ช่อง: ${labels.join(', ')}`);
+      if (Array.isArray(data.warnings)) messages.push(...data.warnings);
+      if (!messages.length) messages.push('AI ยังไม่พบข้อมูลที่มั่นใจพอ กรุณาเพิ่มรายละเอียดแล้วลองใหม่');
+
+      aiSmartStatus.className = 'ai-smart-status ready';
+      aiSmartStatus.textContent = labels.length ? 'แยกข้อมูลเรียบร้อย ตรวจแก้แต่ละช่องก่อนส่งได้เลย' : 'ยังไม่มีช่องที่เติมอัตโนมัติ';
+      aiSmartResult.textContent = messages.join(' · ');
+      aiSmartResult.classList.remove('d-none');
+    } catch (error) {
+      aiSmartStatus.className = 'ai-smart-status error';
+      aiSmartStatus.textContent = error.message || 'AI Smart Fill ไม่สำเร็จ';
+      aiSmartResult.textContent = 'ข้อมูลเดิมในฟอร์มยังอยู่ครบ สามารถกรอกเองหรือลอง AI ใหม่ได้';
+      aiSmartResult.classList.remove('d-none');
+    } finally {
+      aiSmartBtn.disabled = false;
+      aiSmartBtn.textContent = '✦ แยกข้อมูลและกรอกให้';
+    }
   }
 
   function validateStep(step) {
@@ -320,6 +451,7 @@
   document.querySelectorAll('input[name="reporterType"]').forEach((el) => el.addEventListener('change', setReporterTypeUI));
   document.querySelectorAll('input[name="objectType"]').forEach((el) => el.addEventListener('change', setObjectTypeUI));
   document.getElementById('locateBtn').addEventListener('click', locateMe);
+  aiSmartBtn.addEventListener('click', runAiSmartFill);
   fileInput.addEventListener('change', handleFiles);
   form.addEventListener('submit', submitReport);
   form.addEventListener('input', () => currentStep === 3 && buildReview());
@@ -330,5 +462,6 @@
   setObjectTypeUI();
   initMap();
   initBranding();
+  initAiSmartFill();
   initLineIdentity().catch((error) => console.warn('LINE LIFF init skipped:', error.message));
 })();

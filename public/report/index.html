@@ -23,6 +23,20 @@
   <main class="container report-shell py-4 py-md-5">
     <div class="intro-card mb-4"><div><span class="status-dot"></span> ระบบรับแจ้งเหตุออนไลน์</div><p class="mb-0 mt-2 text-secondary">ใช้เวลาเพียงไม่กี่นาที: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p><a class="report-login-link" href="/login/">สำหรับเจ้าหน้าที่: เข้าสู่ศูนย์บัญชาการ</a></div>
 
+    <section class="ai-smart-card mb-4" id="aiSmartCard">
+      <div class="ai-smart-heading">
+        <div><span class="ai-smart-badge">AI SMART FILL</span><h2>พิมพ์ข้อมูลรวม ๆ แล้วให้ AI แยกลงช่องให้</h2></div>
+        <span class="ai-smart-model" id="aiSmartModel">Gemini Free Tier</span>
+      </div>
+      <p class="ai-smart-help">พิมพ์เหมือนเล่าให้คนฟัง เช่น “เห็นโดรนสีดำ 2 ลำ แถวสนามบิน ตอนประมาณสี่ทุ่ม บินจากตะวันออกไปตะวันตก สูงราว 200 เมตร” AI จะช่วยเติมช่องให้ก่อนเท่านั้น ยังไม่บันทึกจนกว่าคุณจะตรวจและกดส่งรายงาน ข้อความนี้จะถูกส่งไป Gemini เพื่อประมวลผล จึงไม่ควรใส่ข้อมูลลับหรือข้อมูลที่ไม่ต้องการส่งออกไปภายนอก</p>
+      <textarea class="form-control ai-smart-input" id="aiSmartText" rows="4" maxlength="4000" placeholder="พิมพ์หรือวางรายละเอียดทั้งหมดตรงนี้..."></textarea>
+      <div class="ai-smart-actions">
+        <div class="ai-smart-status" id="aiSmartStatus">กำลังตรวจสอบ AI...</div>
+        <button type="button" class="btn btn-primary" id="aiSmartBtn" disabled>✦ แยกข้อมูลและกรอกให้</button>
+      </div>
+      <div class="ai-smart-result d-none" id="aiSmartResult"></div>
+    </section>
+
     <div class="stepper mb-4" id="stepper">
       <button type="button" class="step-item active" data-step-target="1"><span>1</span><strong>ข้อมูลพื้นฐาน</strong></button><div class="step-line"></div>
       <button type="button" class="step-item" data-step-target="2"><span>2</span><strong>รายละเอียด</strong></button><div class="step-line"></div>

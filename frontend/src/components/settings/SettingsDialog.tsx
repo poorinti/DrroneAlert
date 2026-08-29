@@ -1,4 +1,4 @@
-import { Check, Image, Palette, Upload } from 'lucide-react';
+import { Check, Image, KeyRound, Palette, ShieldCheck, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { brandingAssetUrl } from '../../lib/branding';
 import type { Settings, SurfaceMode } from '../../types';
@@ -57,6 +57,7 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
   const [navbarColor, setNavbarColor] = useState(settings.navbar_surface_color || '#dbeafe');
   const [panelMode, setPanelMode] = useState<SurfaceMode>(settings.panel_surface_mode || 'white');
   const [panelColor, setPanelColor] = useState(settings.panel_surface_color || '#ffffff');
+  const [geminiKey, setGeminiKey] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -71,6 +72,7 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
     setNavbarColor(settings.navbar_surface_color || '#dbeafe');
     setPanelMode(settings.panel_surface_mode || 'white');
     setPanelColor(settings.panel_surface_color || '#ffffff');
+    setGeminiKey('');
     setError('');
   }, [settings, open]);
 
@@ -94,6 +96,7 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
     form.set('navbarSurfaceColor', navbarColor);
     form.set('panelSurfaceMode', panelMode);
     form.set('panelSurfaceColor', panelColor);
+    if (geminiKey.trim()) form.set('geminiApiKey', geminiKey.trim());
     if (primary) form.set('logo', primary);
     if (secondary) form.set('secondaryLogo', secondary);
     setSaving(true);
@@ -115,6 +118,20 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
     <label className="mt-3 block text-[11px] font-semibold">ชื่อหน่วยงาน / คำอธิบาย<Input className="mt-1.5" value={organization} maxLength={160} onChange={(event) => setOrganization(event.target.value)}/></label>
     {logoPicker('โลโก้ระบบ', primaryPreview, 'primary')}
     {logoPicker('โลโก้หน่วยงาน', secondaryPreview, 'secondary')}
+    <div className="my-4 h-px bg-slate-200" />
+    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <strong className="flex items-center gap-1.5 text-[11px] text-slate-900"><KeyRound size={14} className="text-blue-600"/>Gemini API Key</strong>
+          <p className="mt-1 text-[9px] leading-relaxed text-slate-500">สำหรับ AI Smart Fill · ค่าปัจจุบันจะไม่ถูกส่งกลับมาให้หน้าเว็บและไม่มีปุ่มเปิดดู</p>
+        </div>
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[8.5px] font-bold ${settings.gemini_api_key_configured ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}><ShieldCheck size={11}/>{settings.gemini_api_key_configured ? 'ตั้งค่าแล้ว' : 'ยังไม่ได้ตั้งค่า'}</span>
+      </div>
+      <label className="mt-3 block text-[10px] font-semibold text-slate-700">วาง API key ใหม่เพื่อเพิ่มหรือแทนค่าของเดิม
+        <Input type="password" autoComplete="off" spellCheck={false} className="mt-1.5 font-mono" value={geminiKey} onChange={(event) => setGeminiKey(event.target.value)} placeholder={settings.gemini_api_key_configured ? 'วาง key ใหม่เมื่อต้องการเปลี่ยน' : 'วาง Gemini API key ที่นี่'} />
+      </label>
+      <p className="mt-2 text-[8.5px] leading-relaxed text-slate-500">ปล่อยช่องนี้ว่างไว้ = ใช้ key เดิมต่อ · เมื่อบันทึก key ใหม่ ระบบจะเข้ารหัสก่อนเก็บ และบันทึก Audit ว่ามีการเปลี่ยน key โดยไม่บันทึกค่าของ key ลง Log</p>
+    </section>
     <div className="my-4 h-px bg-slate-200" />
     <strong className="text-[11px] text-slate-900">สี Dashboard</strong>
     <p className="mt-1 text-[9px] text-slate-500">เลือกแบบกระจกใสเดิม, ขาวชัด หรือเลือกโทนสีเองจากวงล้อสี</p>
