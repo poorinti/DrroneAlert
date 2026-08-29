@@ -21,7 +21,7 @@
   </header>
 
   <main class="container report-shell py-4 py-md-5">
-    <div class="intro-card mb-4"><div><span class="status-dot"></span> ระบบรับแจ้งเหตุออนไลน์</div><p class="mb-0 mt-2 text-secondary">ใช้เวลาเพียงไม่กี่นาที: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p><details class="report-admin-menu"><summary aria-label="เมนูเจ้าหน้าที่">•••</summary><a class="report-login-link" href="/login/">เข้าสู่ศูนย์บัญชาการ</a></details></div>
+    <div class="intro-card mb-4"><div class="intro-status"><span class="status-dot"></span><strong>ระบบรับแจ้งเหตุออนไลน์</strong></div><p class="intro-flow mb-0">ใช้เวลาไม่กี่นาที · 3 ขั้นตอน: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p><details class="report-admin-menu"><summary aria-label="เมนูเจ้าหน้าที่">•••</summary><a class="report-login-link" href="/login/">เข้าสู่ศูนย์บัญชาการ</a></details></div>
 
     <section class="ai-smart-card mb-4" id="aiSmartCard">
       <div class="ai-smart-heading">
@@ -29,20 +29,23 @@
         <span class="ai-smart-model" id="aiSmartModel">AI Key</span>
       </div>
       <p class="ai-smart-help">เล่าเหตุการณ์ตามที่เห็นจริงให้ AI ช่วยแยกข้อมูลลงช่องให้ก่อน ระบบยังไม่บันทึกจนกว่าคุณจะตรวจและกดส่งรายงาน ข้อความที่พิมพ์จะถูกส่งให้ AI ประมวลผล จึงไม่ควรใส่ข้อมูลลับที่ไม่เกี่ยวข้องกับเหตุการณ์</p>
-      <div class="ai-speaking-guide" aria-label="หัวข้อที่ควรมีในการเล่าเหตุการณ์">
-        <strong>เพื่อให้ AI กรอกได้ครบ ลองพูดหรือพิมพ์ให้มีหัวข้อประมาณนี้</strong>
-        <div class="ai-speaking-grid">
-          <span><b>1</b><em>ผู้พบเหตุ</em><small>เป็นบุคคลทั่วไปหรือหน่วยงาน และชื่อผู้รายงานถ้าต้องการระบุ</small></span>
-          <span><b>2</b><em>วันและเวลา</em><small>พบวันไหน เวลาประมาณกี่โมง หรือเกิดขึ้นเมื่อกี่นาทีก่อน</small></span>
-          <span><b>3</b><em>สถานที่</em><small>ชื่อพื้นที่ จุดสังเกต ถนน อาคาร หรือบริเวณใกล้เคียง</small></span>
-          <span><b>4</b><em>สิ่งที่พบ</em><small>โดรน อากาศยาน หรือยังระบุประเภทไม่ได้</small></span>
-          <span><b>5</b><em>จำนวนและลักษณะ</em><small>กี่ลำ สี รูปร่าง ขนาด ไฟ เสียง หรือลักษณะที่สังเกตได้</small></span>
-          <span><b>6</b><em>การเคลื่อนที่</em><small>บินไปทางไหน สูงประมาณเท่าไร เร็วหรือช้า และอยู่ห่างประมาณเท่าไร</small></span>
-          <span><b>7</b><em>ความผิดปกติ/ความเร่งด่วน</em><small>บินวน เข้าใกล้พื้นที่สำคัญ หายไปทางไหน หรือมีสิ่งใดต้องรีบแจ้ง</small></span>
+      <p class="ai-speaking-example"><b>ตัวอย่าง:</b> “เห็นโดรนสีดำ 2 ลำ แถวสนามบิน ตอนประมาณสี่ทุ่ม บินจากตะวันออกไปตะวันตก สูงราว 200 เมตร อยู่ห่างประมาณ 300 เมตร และบินวนอยู่หลายนาที”</p>
+      <details class="ai-speaking-guide" aria-label="คำแนะนำในการพูด">
+        <summary><span><b>คำแนะนำในการพูด</b><small>กดดู 7 หัวข้อที่ช่วยให้แจ้งข้อมูลได้ครบ</small></span><i aria-hidden="true">⌄</i></summary>
+        <div class="ai-speaking-guide-body">
+          <p>เพื่อให้ AI กรอกได้ครบ ลองพูดหรือพิมพ์ให้มีหัวข้อประมาณนี้</p>
+          <div class="ai-speaking-grid">
+            <span><b>1</b><em>ผู้พบเหตุ</em><small>เป็นบุคคลทั่วไปหรือหน่วยงาน และชื่อผู้รายงานถ้าต้องการระบุ</small></span>
+            <span><b>2</b><em>วันและเวลา</em><small>พบวันไหน เวลาประมาณกี่โมง หรือเกิดขึ้นเมื่อกี่นาทีก่อน</small></span>
+            <span><b>3</b><em>สถานที่</em><small>ชื่อพื้นที่ จุดสังเกต ถนน อาคาร หรือบริเวณใกล้เคียง</small></span>
+            <span><b>4</b><em>สิ่งที่พบ</em><small>โดรน อากาศยาน หรือยังระบุประเภทไม่ได้</small></span>
+            <span><b>5</b><em>จำนวนและลักษณะ</em><small>กี่ลำ สี รูปร่าง ขนาด ไฟ เสียง หรือลักษณะที่สังเกตได้</small></span>
+            <span><b>6</b><em>การเคลื่อนที่</em><small>บินไปทางไหน สูงประมาณเท่าไร เร็วหรือช้า และอยู่ห่างประมาณเท่าไร</small></span>
+            <span><b>7</b><em>ความผิดปกติ/ความเร่งด่วน</em><small>บินวน เข้าใกล้พื้นที่สำคัญ หายไปทางไหน หรือมีสิ่งใดต้องรีบแจ้ง</small></span>
+          </div>
         </div>
-        <p class="ai-speaking-example"><b>ตัวอย่าง:</b> “เห็นโดรนสีดำ 2 ลำ แถวสนามบิน ตอนประมาณสี่ทุ่ม บินจากตะวันออกไปตะวันตก สูงราว 200 เมตร อยู่ห่างประมาณ 300 เมตร และบินวนอยู่หลายนาที”</p>
-      </div>
-      <textarea class="form-control ai-smart-input" id="aiSmartText" rows="4" maxlength="4000" placeholder="เล่าเหตุการณ์ตามหัวข้อด้านบนได้เลย..."></textarea>
+      </details>
+      <textarea class="form-control ai-smart-input" id="aiSmartText" rows="4" maxlength="4000" placeholder="เล่าเหตุการณ์ตามที่เห็นจริงได้เลย..."></textarea>
       <div class="ai-smart-actions">
         <div class="ai-smart-status" id="aiSmartStatus">กำลังตรวจสอบ AI...</div>
         <button type="button" class="btn btn-primary" id="aiSmartBtn" disabled>✦ แยกข้อมูลและกรอกให้</button>

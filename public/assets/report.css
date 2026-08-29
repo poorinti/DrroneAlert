@@ -38,14 +38,18 @@ body {
   border-radius: var(--radius);
   box-shadow: 0 18px 50px rgba(15,23,42,.07);
 }
-.intro-card { position:relative; padding:18px 54px 18px 20px; font-weight:700; backdrop-filter:blur(16px); }
-.report-admin-menu { position:absolute; right:14px; top:14px; z-index:2; }
+.intro-card { position:relative; padding:15px 52px 14px 18px; backdrop-filter:blur(16px); }
+.intro-status { display:flex; align-items:center; min-width:0; color:#1f2937; }
+.intro-status strong { font-size:.86rem; font-weight:800; letter-spacing:-.01em; }
+.intro-flow { margin-top:4px; color:#7b8798; font-size:.69rem; font-weight:600; line-height:1.4; }
+.report-admin-menu { position:absolute; right:14px; top:12px; z-index:2; }
 .report-admin-menu summary { width:30px; height:30px; display:grid; place-items:center; cursor:pointer; list-style:none; border:1px solid #dbe3ef; border-radius:10px; background:#fff; color:#64748b; font-size:.82rem; letter-spacing:.08em; box-shadow:0 6px 18px rgba(15,23,42,.06); }
 .report-admin-menu summary::-webkit-details-marker { display:none; }
 .report-admin-menu[open] summary { color:var(--primary); border-color:#bfdbfe; background:#eff6ff; }
 .report-login-link { position:absolute; right:0; top:36px; width:max-content; margin:0; padding:8px 10px; color:#334155; background:#fff; border:1px solid #dbe3ef; border-radius:10px; box-shadow:0 12px 26px rgba(15,23,42,.12); font-size:.72rem; font-weight:750; text-decoration:none; white-space:nowrap; }
 .report-login-link:hover { color:var(--primary); }
-.status-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 5px rgba(34,197,94,.12); margin-right:8px; }
+.status-dot { display:inline-block; width:8px; height:8px; flex:0 0 auto; border-radius:50%; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.12); margin-right:8px; animation:statusPulse 1.8s ease-in-out infinite; }
+@keyframes statusPulse { 0%,100% { opacity:1; box-shadow:0 0 0 4px rgba(34,197,94,.12); } 50% { opacity:.55; box-shadow:0 0 0 8px rgba(34,197,94,0); } }
 
 .ai-smart-card { padding:20px; border:1px solid rgba(147,197,253,.75); border-radius:22px; background:linear-gradient(135deg,rgba(239,246,255,.98),rgba(255,255,255,.98)); box-shadow:0 18px 50px rgba(29,78,216,.08); }
 .ai-smart-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
@@ -53,14 +57,22 @@ body {
 .ai-smart-badge { display:inline-flex; align-items:center; border-radius:999px; background:#dbeafe; padding:4px 8px; color:#1d4ed8; font-size:.68rem; font-weight:900; letter-spacing:.08em; }
 .ai-smart-model { flex:0 0 auto; border:1px solid #dbe3ef; border-radius:999px; background:#fff; padding:5px 9px; color:#64748b; font-size:.7rem; font-weight:750; }
 .ai-smart-help { margin:10px 0 12px; color:#64748b; font-size:.84rem; line-height:1.55; }
-.ai-speaking-guide { margin:0 0 12px; border:1px solid #bbf7d0; border-radius:16px; background:linear-gradient(145deg,#f0fdf4,#f7fff9); padding:13px 14px; color:#166534; }
-.ai-speaking-guide > strong { display:block; margin-bottom:10px; font-size:.82rem; font-weight:850; }
+.ai-speaking-example { margin:0 0 10px; border:1px solid #d1fae5; border-radius:13px; background:#f0fdf4; padding:9px 11px; color:#216e3a; font-size:.74rem; line-height:1.5; }
+.ai-speaking-guide { margin:0 0 12px; border:1px solid #bbf7d0; border-radius:14px; background:#f7fff9; color:#166534; overflow:hidden; }
+.ai-speaking-guide summary { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; list-style:none; padding:10px 12px; background:#ecfdf3; user-select:none; }
+.ai-speaking-guide summary::-webkit-details-marker { display:none; }
+.ai-speaking-guide summary span { min-width:0; display:flex; flex-direction:column; gap:1px; }
+.ai-speaking-guide summary b { color:#166534; font-size:.78rem; font-weight:850; }
+.ai-speaking-guide summary small { color:#4b7a5b; font-size:.66rem; line-height:1.35; }
+.ai-speaking-guide summary i { flex:0 0 auto; color:#15803d; font-size:1rem; font-style:normal; transition:transform .18s ease; }
+.ai-speaking-guide[open] summary i { transform:rotate(180deg); }
+.ai-speaking-guide-body { border-top:1px solid #d1fae5; padding:11px 12px 12px; }
+.ai-speaking-guide-body > p { margin:0 0 9px; color:#2f6844; font-size:.72rem; font-weight:750; }
 .ai-speaking-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.ai-speaking-grid span { display:grid; grid-template-columns:24px minmax(0,1fr); column-gap:7px; row-gap:1px; align-items:start; min-width:0; border:1px solid rgba(134,239,172,.7); border-radius:12px; background:rgba(255,255,255,.78); padding:8px 9px; }
+.ai-speaking-grid span { display:grid; grid-template-columns:24px minmax(0,1fr); column-gap:7px; row-gap:1px; align-items:start; min-width:0; border:1px solid rgba(134,239,172,.7); border-radius:12px; background:rgba(255,255,255,.82); padding:8px 9px; }
 .ai-speaking-grid b { grid-row:1 / span 2; display:grid; width:22px; height:22px; place-items:center; border-radius:999px; background:#dcfce7; color:#15803d; font-size:.68rem; }
 .ai-speaking-grid em { min-width:0; color:#166534; font-size:.74rem; font-style:normal; font-weight:850; }
 .ai-speaking-grid small { min-width:0; color:#3f6f50; font-size:.68rem; line-height:1.4; }
-.ai-speaking-example { margin:10px 0 0; border-top:1px solid rgba(134,239,172,.65); padding-top:9px; color:#216e3a; font-size:.74rem; line-height:1.5; }
 .ai-smart-input { min-height:105px; resize:vertical; background:rgba(255,255,255,.94); }
 .ai-smart-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; }
 .ai-smart-status { min-width:0; color:#64748b; font-size:.75rem; font-weight:650; }
@@ -173,7 +185,8 @@ textarea.form-control { border-radius:15px; }
   .ai-smart-card { padding:16px; }
   .ai-smart-heading { flex-direction:column; gap:8px; }
   .ai-speaking-grid { grid-template-columns:1fr; }
-  .ai-speaking-guide { padding:12px; }
+  .ai-speaking-guide summary { padding:10px 11px; }
+  .ai-speaking-guide-body { padding:10px 11px 11px; }
   .ai-speaking-grid span { padding:8px; }
   .ai-smart-actions { align-items:stretch; flex-direction:column; }
   .ai-smart-actions .btn { width:100%; min-height:46px; }
