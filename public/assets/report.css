@@ -38,9 +38,13 @@ body {
   border-radius: var(--radius);
   box-shadow: 0 18px 50px rgba(15,23,42,.07);
 }
-.intro-card { padding: 18px 20px; font-weight: 700; backdrop-filter:blur(16px); }
-.report-login-link { display:inline-block; margin-top:10px; color:var(--primary); font-size:.8rem; font-weight:750; text-decoration:none; }
-.report-login-link:hover { text-decoration:underline; }
+.intro-card { position:relative; padding:18px 54px 18px 20px; font-weight:700; backdrop-filter:blur(16px); }
+.report-admin-menu { position:absolute; right:14px; top:14px; z-index:2; }
+.report-admin-menu summary { width:30px; height:30px; display:grid; place-items:center; cursor:pointer; list-style:none; border:1px solid #dbe3ef; border-radius:10px; background:#fff; color:#64748b; font-size:.82rem; letter-spacing:.08em; box-shadow:0 6px 18px rgba(15,23,42,.06); }
+.report-admin-menu summary::-webkit-details-marker { display:none; }
+.report-admin-menu[open] summary { color:var(--primary); border-color:#bfdbfe; background:#eff6ff; }
+.report-login-link { position:absolute; right:0; top:36px; width:max-content; margin:0; padding:8px 10px; color:#334155; background:#fff; border:1px solid #dbe3ef; border-radius:10px; box-shadow:0 12px 26px rgba(15,23,42,.12); font-size:.72rem; font-weight:750; text-decoration:none; white-space:nowrap; }
+.report-login-link:hover { color:var(--primary); }
 .status-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 5px rgba(34,197,94,.12); margin-right:8px; }
 
 .ai-smart-card { padding:20px; border:1px solid rgba(147,197,253,.75); border-radius:22px; background:linear-gradient(135deg,rgba(239,246,255,.98),rgba(255,255,255,.98)); box-shadow:0 18px 50px rgba(29,78,216,.08); }
@@ -94,6 +98,10 @@ textarea.form-control { border-radius:15px; }
 .map-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .coordinate-chip { padding:10px 13px; border-radius:12px; background:#f1f5f9; color:#475569; font-size:.86rem; font-variant-numeric:tabular-nums; }
 .report-map { width:100%; height:390px; border-radius:18px; overflow:hidden; border:1px solid #dbe3ef; background:#e2e8f0; }
+.place-search-status { margin-top:10px; color:#64748b; font-size:.78rem; font-weight:650; }
+.place-search-results { display:flex; gap:8px; overflow-x:auto; margin-top:9px; padding-bottom:2px; scrollbar-width:thin; }
+.place-search-option { flex:0 0 auto; max-width:min(360px,82vw); border:1px solid #bfdbfe; border-radius:12px; background:#eff6ff; color:#1e3a8a; padding:8px 10px; text-align:left; font-size:.75rem; line-height:1.35; font-weight:700; }
+.place-search-option:hover { border-color:#60a5fa; background:#dbeafe; }
 .map-hint { margin-top:9px; color:#64748b; font-size:.82rem; }
 .leaflet-control-attribution { font-size:9px; }
 

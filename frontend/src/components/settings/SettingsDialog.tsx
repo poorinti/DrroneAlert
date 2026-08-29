@@ -1,5 +1,5 @@
 import { Check, Image, KeyRound, Palette, ShieldCheck, Upload } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { brandingAssetUrl } from '../../lib/branding';
 import type { Settings, SurfaceMode } from '../../types';
 import { Button } from '../ui/button';
@@ -60,8 +60,13 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
   const [geminiKey, setGeminiKey] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const wasOpen = useRef(false);
 
   useEffect(() => {
+    const justOpened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!justOpened) return;
+
     setTitle(settings.app_title || 'D DRONE');
     setOrganization(settings.organization_name || '');
     setPrimary(null);
@@ -74,7 +79,7 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
     setPanelColor(settings.panel_surface_color || '#ffffff');
     setGeminiKey('');
     setError('');
-  }, [settings, open]);
+  }, [open, settings]);
 
   const choose = (file: File | null, kind: 'primary' | 'secondary') => {
     if (kind === 'primary') {
@@ -113,7 +118,7 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
 
   const logoPicker = (label: string, preview: string, kind: 'primary' | 'secondary') => <label className="mt-4 block text-[11px] font-semibold">{label}<span className="ml-1 font-normal text-muted">PNG, JPG, WEBP หรือ GIF ไม่เกิน 2 MB</span><span className="mt-1.5 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3"><span className="grid h-14 w-14 place-items-center overflow-hidden rounded-2xl bg-blue-500 text-white">{preview ? <img className="h-full w-full object-cover" src={preview} alt={label}/> : <Image size={20}/>}</span><span className="text-xs font-medium text-slate-600"><Upload className="mb-1" size={15}/>เลือกไฟล์ {label}</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(event) => choose(event.target.files?.[0] || null, kind)}/></span></label>;
 
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[min(88vh,820px)] overflow-y-auto"><DialogTitle>ตั้งค่าระบบ</DialogTitle><DialogDescription>กำหนด Branding และหน้าตา Dashboard โดย Navbar กับแผงข้อมูลเลือกสีแยกกันได้</DialogDescription><form onSubmit={submit} className="mt-5">
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[calc(100dvh-12px)] overflow-y-auto overscroll-contain p-4 sm:max-h-[min(88vh,820px)] sm:p-6"><DialogTitle>ตั้งค่าระบบ</DialogTitle><DialogDescription>กำหนด Branding และหน้าตา Dashboard โดย Navbar กับแผงข้อมูลเลือกสีแยกกันได้</DialogDescription><form onSubmit={submit} className="mt-5">
     <label className="text-[11px] font-semibold">ชื่อโครงการ<Input className="mt-1.5" value={title} maxLength={100} onChange={(event) => setTitle(event.target.value)}/></label>
     <label className="mt-3 block text-[11px] font-semibold">ชื่อหน่วยงาน / คำอธิบาย<Input className="mt-1.5" value={organization} maxLength={160} onChange={(event) => setOrganization(event.target.value)}/></label>
     {logoPicker('โลโก้ระบบ', primaryPreview, 'primary')}
@@ -138,6 +143,8 @@ export function SettingsDialog({ open, settings, onOpenChange, onPreview, onSave
     <SurfacePicker label="Navbar ด้านบน" mode={navbarMode} color={navbarColor} onMode={(value) => { setNavbarMode(value); onPreview({ navbar_surface_mode: value }); }} onColor={(value) => { setNavbarColor(value); onPreview({ navbar_surface_color: value }); }} />
     <SurfacePicker label="แผงข้อมูลด้านล่าง" mode={panelMode} color={panelColor} onMode={(value) => { setPanelMode(value); onPreview({ panel_surface_mode: value }); }} onColor={(value) => { setPanelColor(value); onPreview({ panel_surface_color: value }); }} />
     {error && <p className="mt-3 rounded-xl bg-red-50 p-2.5 text-[10px] text-red-600">{error}</p>}
-    <Button disabled={saving} className="mt-4 w-full" type="submit">{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</Button>
+    <div className="sticky bottom-0 z-20 -mx-1 mt-4 flex justify-end border-t border-slate-200/80 bg-white/95 px-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-0">
+      <Button disabled={saving} className="h-9 w-auto min-w-[132px] px-4 text-[11px] sm:h-10 sm:w-full sm:text-sm" type="submit">{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</Button>
+    </div>
   </form></DialogContent></Dialog>;
 }

@@ -21,12 +21,12 @@
   </header>
 
   <main class="container report-shell py-4 py-md-5">
-    <div class="intro-card mb-4"><div><span class="status-dot"></span> ระบบรับแจ้งเหตุออนไลน์</div><p class="mb-0 mt-2 text-secondary">ใช้เวลาเพียงไม่กี่นาที: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p><a class="report-login-link" href="/login/">สำหรับเจ้าหน้าที่: เข้าสู่ศูนย์บัญชาการ</a></div>
+    <div class="intro-card mb-4"><div><span class="status-dot"></span> ระบบรับแจ้งเหตุออนไลน์</div><p class="mb-0 mt-2 text-secondary">ใช้เวลาเพียงไม่กี่นาที: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p><details class="report-admin-menu"><summary aria-label="เมนูเจ้าหน้าที่">•••</summary><a class="report-login-link" href="/login/">เข้าสู่ศูนย์บัญชาการ</a></details></div>
 
     <section class="ai-smart-card mb-4" id="aiSmartCard">
       <div class="ai-smart-heading">
         <div><span class="ai-smart-badge">AI SMART FILL</span><h2>พิมพ์ข้อมูลรวม ๆ แล้วให้ AI แยกลงช่องให้</h2></div>
-        <span class="ai-smart-model" id="aiSmartModel">Gemini Free Tier</span>
+        <span class="ai-smart-model" id="aiSmartModel">AI Key</span>
       </div>
       <p class="ai-smart-help">พิมพ์เหมือนเล่าให้คนฟัง เช่น “เห็นโดรนสีดำ 2 ลำ แถวสนามบิน ตอนประมาณสี่ทุ่ม บินจากตะวันออกไปตะวันตก สูงราว 200 เมตร” AI จะช่วยเติมช่องให้ก่อนเท่านั้น ยังไม่บันทึกจนกว่าคุณจะตรวจและกดส่งรายงาน ข้อความนี้จะถูกส่งไป Gemini เพื่อประมวลผล จึงไม่ควรใส่ข้อมูลลับหรือข้อมูลที่ไม่ต้องการส่งออกไปภายนอก</p>
       <textarea class="form-control ai-smart-input" id="aiSmartText" rows="4" maxlength="4000" placeholder="พิมพ์หรือวางรายละเอียดทั้งหมดตรงนี้..."></textarea>
@@ -65,9 +65,11 @@
           <div class="section-heading"><div><span class="section-number">02</span><h2>วัน เวลา และตำแหน่งที่พบ</h2></div><p>GPS ของคุณเป็นเพียงจุดตั้งต้น สามารถลากหมุดไปยังตำแหน่งที่พบจริงได้</p></div>
           <div class="row g-3">
             <div class="col-12 col-md-6"><label class="form-label">วัน / เวลาที่ตรวจพบ <span class="required">*</span></label><input class="form-control form-control-lg" type="datetime-local" id="occurredAt" name="occurredAt" required></div>
-            <div class="col-12 col-md-6"><label class="form-label">ชื่อสถานที่</label><input class="form-control form-control-lg" name="locationName" placeholder="เช่น บริเวณสนามกีฬา / บ้านเลขที่ / จุดสังเกต"></div>
+            <div class="col-12 col-md-6"><label class="form-label">ชื่อสถานที่</label><input class="form-control form-control-lg" id="locationName" name="locationName" placeholder="เช่น บริเวณสนามกีฬา / บ้านเลขที่ / จุดสังเกต"></div>
           </div>
-          <div class="map-toolbar mt-3"><button type="button" class="btn btn-dark btn-lg" id="locateBtn">⌖ ใช้ตำแหน่งของฉัน</button><div class="coordinate-chip" id="coordinateText">ยังไม่ได้ปักตำแหน่ง</div></div>
+          <div class="map-toolbar mt-3"><div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-dark btn-lg" id="locateBtn">⌖ ใช้ตำแหน่งของฉัน</button><button type="button" class="btn btn-outline-primary btn-lg" id="searchPlaceBtn">⌕ ค้นหาสถานที่</button></div><div class="coordinate-chip" id="coordinateText">ยังไม่ได้ปักตำแหน่ง</div></div>
+          <div id="placeSearchStatus" class="place-search-status d-none"></div>
+          <div id="placeSearchResults" class="place-search-results d-none"></div>
           <div id="reportMap" class="report-map mt-3" aria-label="แผนที่เลือกตำแหน่ง"></div>
           <input type="hidden" name="incidentLat" id="incidentLat"><input type="hidden" name="incidentLng" id="incidentLng"><input type="hidden" name="reporterLat" id="reporterLat"><input type="hidden" name="reporterLng" id="reporterLng"><input type="hidden" name="gpsAccuracyM" id="gpsAccuracyM">
           <div class="map-hint">แตะบนแผนที่เพื่อปักหมุด หรือกดค้างแล้วลากหมุดเพื่อแก้ตำแหน่ง</div>

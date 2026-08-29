@@ -13,6 +13,12 @@ const reportSubmitLimit = createRateLimit({
   max: 20,
   message: 'ส่งรายงานถี่เกินไป กรุณารอสักครู่แล้วลองใหม่'
 });
+const publicGeocodeLimit = createRateLimit({
+  windowMs: 60 * 1000,
+  max: 15,
+  message: 'ค้นหาสถานที่ถี่เกินไป กรุณารอสักครู่แล้วลองใหม่'
+});
+const publicGeocodeCache = new Map();
 
 const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads');
 const maxUploadBytes = Number(process.env.MAX_UPLOAD_MB || 50) * 1024 * 1024;
@@ -69,6 +75,52 @@ function compactLocalDate(date = new Date()) {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}${month}${day}`;
 }
+
+router.get('/geocode', publicGeocodeLimit, async (req, res, next) => {
+  try {
+    const query = String(req.query.q || '').trim();
+    if (query.length < 2 || query.length > 160) return res.status(400).json({ error: 'กรุณาระบุสถานที่ที่ต้องการค้นหา' });
+    const cacheKey = query.toLocaleLowerCase('th-TH');
+    const cached = publicGeocodeCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return res.json(cached.value);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    let response;
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'jsonv2');
+      url.searchParams.set('limit', '5');
+      url.searchParams.set('addressdetails', '1');
+      url.searchParams.set('accept-language', 'th,en');
+      response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': process.env.GEOCODER_USER_AGENT || 'DroneAlert/0.2 public-report-geocoder'
+        }
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!response.ok) return res.status(502).json({ error: 'ไม่สามารถค้นหาสถานที่ได้ในขณะนี้' });
+    const rows = await response.json();
+    const results = (Array.isArray(rows) ? rows : []).map((item) => ({
+      display_name: String(item.display_name || query),
+      lat: Number(item.lat),
+      lng: Number(item.lon)
+    })).filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng));
+    if (!results.length) return res.status(404).json({ error: 'ไม่พบสถานที่ที่ค้นหา' });
+    const value = { results };
+    publicGeocodeCache.set(cacheKey, { value, expiresAt: Date.now() + 5 * 60 * 1000 });
+    if (publicGeocodeCache.size > 100) publicGeocodeCache.delete(publicGeocodeCache.keys().next().value);
+    res.json(value);
+  } catch (error) {
+    if (error?.name === 'AbortError') return res.status(504).json({ error: 'การค้นหาสถานที่ใช้เวลานานเกินไป กรุณาลองใหม่' });
+    next(error);
+  }
+});
 
 router.get('/', requireAuth, async (req, res, next) => {
   try {

@@ -16,6 +16,9 @@
   const aiSmartStatus = document.getElementById('aiSmartStatus');
   const aiSmartResult = document.getElementById('aiSmartResult');
   const aiSmartModel = document.getElementById('aiSmartModel');
+  const searchPlaceBtn = document.getElementById('searchPlaceBtn');
+  const placeSearchStatus = document.getElementById('placeSearchStatus');
+  const placeSearchResults = document.getElementById('placeSearchResults');
   let currentStep = 1;
   let selectedFiles = [];
   let map;
@@ -190,20 +193,22 @@
     try {
       const response = await fetch('/api/ai/config');
       const data = await response.json().catch(() => ({}));
-      aiSmartModel.textContent = data.model || 'Gemini Free Tier';
       if (response.ok && data.enabled) {
         aiSmartBtn.disabled = false;
-        aiSmartStatus.className = 'ai-smart-status ready';
-        aiSmartStatus.textContent = 'พร้อมใช้งาน · API key อยู่บนเซิร์ฟเวอร์ ไม่ส่งมาที่หน้าเว็บ';
+        aiSmartModel.textContent = 'AI Key Active';
+        aiSmartStatus.className = 'ai-smart-status';
+        aiSmartStatus.textContent = '';
       } else {
         aiSmartBtn.disabled = true;
+        aiSmartModel.textContent = 'AI Key Inactive';
         aiSmartStatus.className = 'ai-smart-status error';
-        aiSmartStatus.textContent = 'ยังไม่ได้ตั้งค่า Gemini API key บนเซิร์ฟเวอร์';
+        aiSmartStatus.textContent = '';
       }
     } catch (_) {
       aiSmartBtn.disabled = true;
+      aiSmartModel.textContent = 'AI Key Inactive';
       aiSmartStatus.className = 'ai-smart-status error';
-      aiSmartStatus.textContent = 'ตรวจสอบสถานะ AI ไม่สำเร็จ';
+      aiSmartStatus.textContent = '';
     }
   }
 
@@ -227,11 +232,17 @@
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'AI Smart Fill ไม่สำเร็จ');
 
-      const applied = applySmartFields(data.fields || {});
+      const fields = data.fields || {};
+      const applied = applySmartFields(fields);
+      let approximatePinned = false;
+      if (fields.locationName && (fields.incidentLat === undefined || fields.incidentLng === undefined)) {
+        approximatePinned = await searchAndPinPlace(fields.locationName);
+      }
       const labels = [...new Set(applied.map((key) => aiFieldLabels[key]).filter(Boolean))];
       const messages = [];
       if (labels.length) messages.push(`เติมให้แล้ว ${labels.length} ช่อง: ${labels.join(', ')}`);
-      if (Array.isArray(data.warnings)) messages.push(...data.warnings);
+      if (approximatePinned) messages.push('ปักตำแหน่งประมาณการจากชื่อสถานที่ให้แล้ว กรุณาตรวจหมุดก่อนส่ง');
+      if (Array.isArray(data.warnings)) messages.push(...data.warnings.filter((warning) => !approximatePinned || !String(warning).includes('ปักหมุด')));
       if (!messages.length) messages.push('AI ยังไม่พบข้อมูลที่มั่นใจพอ กรุณาเพิ่มรายละเอียดแล้วลองใหม่');
 
       aiSmartStatus.className = 'ai-smart-status ready';
@@ -266,6 +277,61 @@
     return false;
   }
 
+  function renderPlaceResults(results) {
+    placeSearchResults.innerHTML = '';
+    results.forEach((result, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'place-search-option';
+      button.textContent = `${index + 1}. ${result.display_name}`;
+      button.addEventListener('click', () => {
+        setIncidentPoint(result.lat, result.lng, true);
+        placeSearchStatus.className = 'place-search-status';
+        placeSearchStatus.textContent = `ตำแหน่งประมาณการ: ${result.display_name} · ตรวจหมุดก่อนส่งรายงาน`;
+      });
+      placeSearchResults.appendChild(button);
+    });
+    placeSearchResults.classList.toggle('d-none', !results.length);
+  }
+
+  async function searchAndPinPlace(queryText) {
+    const query = String(queryText || '').trim();
+    if (query.length < 2) {
+      placeSearchStatus.className = 'place-search-status';
+      placeSearchStatus.textContent = 'พิมพ์ชื่อสถานที่ก่อนค้นหา';
+      placeSearchStatus.classList.remove('d-none');
+      return false;
+    }
+
+    searchPlaceBtn.disabled = true;
+    searchPlaceBtn.textContent = 'กำลังค้นหา...';
+    placeSearchStatus.className = 'place-search-status';
+    placeSearchStatus.textContent = `กำลังค้นหา “${query}”...`;
+    placeSearchStatus.classList.remove('d-none');
+    placeSearchResults.classList.add('d-none');
+    placeSearchResults.innerHTML = '';
+
+    try {
+      const response = await fetch(`/api/reports/geocode?q=${encodeURIComponent(query)}`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'ค้นหาสถานที่ไม่สำเร็จ');
+      const results = Array.isArray(data.results) ? data.results : [];
+      if (!results.length) throw new Error('ไม่พบสถานที่ที่ค้นหา');
+      renderPlaceResults(results);
+      setIncidentPoint(results[0].lat, results[0].lng, true);
+      placeSearchStatus.className = 'place-search-status';
+      placeSearchStatus.textContent = `ปักตำแหน่งประมาณการจาก “${query}” ให้แล้ว · ถ้าไม่ตรงให้เลือกผลลัพธ์อื่นหรือลากหมุดแก้`;
+      return true;
+    } catch (error) {
+      placeSearchStatus.className = 'place-search-status text-danger';
+      placeSearchStatus.textContent = error.message || 'ค้นหาสถานที่ไม่สำเร็จ';
+      return false;
+    } finally {
+      searchPlaceBtn.disabled = false;
+      searchPlaceBtn.textContent = '⌕ ค้นหาสถานที่';
+    }
+  }
+
   function initMap() {
     map = L.map('reportMap', { zoomControl: true }).setView([13.7563, 100.5018], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -294,6 +360,7 @@
 
   function locateMe() {
     const btn = document.getElementById('locateBtn');
+    if (!window.isSecureContext) return fail('GPS ของมือถือใช้งานผ่าน HTTP ไม่ได้ กรุณาแตะปักหมุดบนแผนที่เอง หรือเปิดระบบผ่าน HTTPS');
     if (!navigator.geolocation) return fail('อุปกรณ์นี้ไม่รองรับ GPS');
     btn.disabled = true;
     btn.textContent = 'กำลังหาตำแหน่ง...';
@@ -429,6 +496,10 @@
       form.classList.add('d-none');
       document.getElementById('stepper').classList.add('d-none');
       document.querySelector('.intro-card').classList.add('d-none');
+      document.getElementById('aiSmartCard')?.classList.add('d-none');
+      aiSmartText.value = '';
+      aiSmartResult.textContent = '';
+      aiSmartResult.classList.add('d-none');
       document.getElementById('successReportNo').textContent = data.reportNo;
       document.getElementById('successPanel').classList.remove('d-none');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -451,6 +522,7 @@
   document.querySelectorAll('input[name="reporterType"]').forEach((el) => el.addEventListener('change', setReporterTypeUI));
   document.querySelectorAll('input[name="objectType"]').forEach((el) => el.addEventListener('change', setObjectTypeUI));
   document.getElementById('locateBtn').addEventListener('click', locateMe);
+  searchPlaceBtn.addEventListener('click', () => searchAndPinPlace(formValue('locationName')));
   aiSmartBtn.addEventListener('click', runAiSmartFill);
   fileInput.addEventListener('change', handleFiles);
   form.addEventListener('submit', submitReport);
