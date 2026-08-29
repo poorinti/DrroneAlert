@@ -120,12 +120,27 @@ prepare_env() {
 }
 
 prepare_admin_credentials() {
+  ADMIN_NEEDS_BOOTSTRAP=0
   if [[ ! -f "$CREDENTIAL_FILE" ]]; then
     umask 077
     {
       printf 'ADMIN_USERNAME=admin\n'
-      printf 'ADMIN_PASSWORD=%s\n' "$(openssl rand -hex 10)"
+      printf 'ADMIN_PASSWORD=1234\n'
+      printf 'ADMIN_BOOTSTRAP_VERSION=2\n'
     } > "$CREDENTIAL_FILE"
+    ADMIN_NEEDS_BOOTSTRAP=1
+  else
+    # shellcheck disable=SC1090
+    source "$CREDENTIAL_FILE"
+    if [[ "${ADMIN_BOOTSTRAP_VERSION:-0}" != "2" ]]; then
+      umask 077
+      {
+        printf 'ADMIN_USERNAME=admin\n'
+        printf 'ADMIN_PASSWORD=1234\n'
+        printf 'ADMIN_BOOTSTRAP_VERSION=2\n'
+      } > "$CREDENTIAL_FILE"
+      ADMIN_NEEDS_BOOTSTRAP=1
+    fi
   fi
   chmod 600 "$CREDENTIAL_FILE"
   # shellcheck disable=SC1090
@@ -166,7 +181,11 @@ start_stack() {
 
 ensure_admin() {
   log "สร้าง/ยืนยันบัญชี Super Admin"
-  "${COMPOSE[@]}" exec -T app npm run create-admin -- "$ADMIN_USERNAME" "$ADMIN_PASSWORD" >/dev/null
+  if [[ "${ADMIN_NEEDS_BOOTSTRAP:-0}" == "1" ]]; then
+    "${COMPOSE[@]}" exec -T app npm run create-admin -- "$ADMIN_USERNAME" "$ADMIN_PASSWORD" >/dev/null
+  else
+    "${COMPOSE[@]}" exec -T app npm run create-admin -- "$ADMIN_USERNAME" "$ADMIN_PASSWORD" --create-only >/dev/null
+  fi
 }
 
 print_summary() {

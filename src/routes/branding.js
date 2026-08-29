@@ -17,11 +17,26 @@ function publicBrandingUrl(value) {
   return `/branding-assets/${encodeURIComponent(path.posix.basename(normalized))}`;
 }
 
+function looksLikeMojibake(value) {
+  return /(?:à¸|à¹|Ã|Â|â€|ï¿½)/.test(String(value || ''));
+}
+
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('app_title','organization_name','app_logo_path','secondary_logo_path')");
     const branding = { ...defaults };
-    for (const row of rows) branding[row.setting_key] = row.setting_value || defaults[row.setting_key] || '';
+    let repairOrganization = false;
+    for (const row of rows) {
+      if (row.setting_key === 'organization_name' && looksLikeMojibake(row.setting_value)) {
+        branding.organization_name = defaults.organization_name;
+        repairOrganization = true;
+        continue;
+      }
+      branding[row.setting_key] = row.setting_value || defaults[row.setting_key] || '';
+    }
+    if (repairOrganization) {
+      await pool.execute("UPDATE app_settings SET setting_value = ? WHERE setting_key = 'organization_name'", [defaults.organization_name]);
+    }
     res.json({
       app_title: branding.app_title,
       organization_name: branding.organization_name,

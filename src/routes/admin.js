@@ -19,6 +19,8 @@ const allowedLogoTypes = new Map([
 ]);
 const allowedSurfaceModes = new Set(['glass', 'white', 'custom']);
 const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(value);
+const defaultOrganizationName = 'ศูนย์ควบคุมและเฝ้าระวังอากาศยาน';
+const looksLikeMojibake = (value) => /(?:à¸|à¹|Ã|Â|â€|ï¿½)/.test(String(value || ''));
 let settingsTableReady;
 let reportReadsTableReady;
 
@@ -39,6 +41,10 @@ function ensureSettingsTable() {
         ('navbar_surface_color', '#dbeafe'),
         ('panel_surface_mode', 'white'),
         ('panel_surface_color', '#ffffff')`);
+      const [organizationRows] = await pool.execute("SELECT setting_value FROM app_settings WHERE setting_key = 'organization_name' LIMIT 1");
+      if (looksLikeMojibake(organizationRows[0]?.setting_value)) {
+        await pool.execute("UPDATE app_settings SET setting_value = ? WHERE setting_key = 'organization_name'", [defaultOrganizationName]);
+      }
     })().catch((error) => { settingsTableReady = null; throw error; });
   }
   return settingsTableReady;
