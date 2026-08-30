@@ -477,6 +477,41 @@
     alertBox.textContent = message;
   }
 
+  async function copyReportNumber() {
+    const reportNo = document.getElementById('successReportNo').textContent.trim();
+    const copyButton = document.getElementById('copyReportNoBtn');
+    if (!reportNo || reportNo === '-') return;
+
+    const originalText = '⧉ คัดลอกเลขที่';
+    try {
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(reportNo);
+      } else {
+        const copyField = document.createElement('textarea');
+        copyField.value = reportNo;
+        copyField.setAttribute('readonly', '');
+        copyField.style.position = 'fixed';
+        copyField.style.opacity = '0';
+        document.body.appendChild(copyField);
+        copyField.select();
+        copyField.setSelectionRange(0, copyField.value.length);
+        const copied = document.execCommand('copy');
+        copyField.remove();
+        if (!copied) throw new Error('Copy command failed');
+      }
+
+      copyButton.textContent = '✓ คัดลอกแล้ว';
+      copyButton.classList.add('copied');
+    } catch {
+      copyButton.textContent = 'คัดลอกไม่สำเร็จ';
+    }
+
+    window.setTimeout(() => {
+      copyButton.textContent = originalText;
+      copyButton.classList.remove('copied');
+    }, 1800);
+  }
+
   async function submitReport(event) {
     event.preventDefault();
     clearAlert();
@@ -529,6 +564,7 @@
   fileInput.addEventListener('change', handleFiles);
   form.addEventListener('submit', submitReport);
   form.addEventListener('input', () => currentStep === 3 && buildReview());
+  document.getElementById('copyReportNoBtn').addEventListener('click', copyReportNumber);
   document.getElementById('newReportBtn').addEventListener('click', () => window.location.reload());
 
   setNow();
