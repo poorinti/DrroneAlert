@@ -21,7 +21,7 @@
   </header>
 
   <main class="container report-shell py-4 py-md-5">
-    <div class="intro-card mb-4"><div class="intro-status"><span class="status-dot"></span><strong>ระบบรับแจ้งเหตุออนไลน์</strong></div><p class="intro-flow mb-0">ใช้เวลาไม่กี่นาที · 3 ขั้นตอน: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p><details class="report-admin-menu"><summary aria-label="เมนูเจ้าหน้าที่">•••</summary><a class="report-login-link" href="/login/">เข้าสู่ศูนย์บัญชาการ</a></details></div>
+    <div class="intro-card mb-4"><div class="intro-status"><span class="status-dot"></span><strong>ระบบรับแจ้งเหตุออนไลน์</strong></div><p class="intro-flow mb-0">ใช้เวลาไม่กี่นาที · 3 ขั้นตอน: ข้อมูลพื้นฐาน → รายละเอียด → หลักฐาน</p><a class="report-status-link" href="/report/status/">ตรวจสอบสถานะ</a><details class="report-admin-menu"><summary aria-label="เมนูเจ้าหน้าที่">•••</summary><a class="report-login-link" href="/login/">เข้าสู่ศูนย์บัญชาการ</a></details></div>
 
     <section class="ai-smart-card mb-4" id="aiSmartCard">
       <div class="ai-smart-heading">
@@ -124,7 +124,7 @@
       </section>
     </form>
 
-    <section class="success-panel d-none" id="successPanel"><div class="success-icon">✓</div><div class="brand-kicker">REPORT RECEIVED</div><h2>รับรายงานเรียบร้อยแล้ว</h2><p class="text-secondary">เลขที่รายงานของคุณ</p><div class="report-number" id="successReportNo">-</div><p class="mb-4">ข้อมูลถูกส่งเข้าศูนย์รับแจ้งแล้ว กรุณาเก็บเลขนี้ไว้สำหรับอ้างอิง</p><button class="btn btn-dark btn-lg" type="button" id="newReportBtn">แจ้งเหตุใหม่</button></section>
+    <section class="success-panel d-none" id="successPanel"><div class="success-icon">✓</div><div class="brand-kicker">REPORT RECEIVED</div><h2>รับรายงานเรียบร้อยแล้ว</h2><p class="text-secondary">เลขที่รายงานของคุณ</p><div class="report-number" id="successReportNo">-</div><p class="mb-4">ข้อมูลถูกส่งเข้าศูนย์รับแจ้งแล้ว กรุณาเก็บเลขนี้ไว้สำหรับอ้างอิง</p><div class="success-actions"><a class="btn btn-primary btn-lg" id="checkStatusBtn" href="/report/status/">ตรวจสอบสถานะรายงาน</a><button class="btn btn-dark btn-lg" type="button" id="newReportBtn">แจ้งเหตุใหม่</button></div></section>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

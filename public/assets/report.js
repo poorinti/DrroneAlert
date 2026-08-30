@@ -502,6 +502,7 @@
       aiSmartResult.textContent = '';
       aiSmartResult.classList.add('d-none');
       document.getElementById('successReportNo').textContent = data.reportNo;
+      document.getElementById('checkStatusBtn').href = `/report/status/?reportNo=${encodeURIComponent(data.reportNo)}`;
       document.getElementById('successPanel').classList.remove('d-none');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {

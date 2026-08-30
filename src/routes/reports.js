@@ -18,6 +18,11 @@ const publicGeocodeLimit = createRateLimit({
   max: 15,
   message: 'ค้นหาสถานที่ถี่เกินไป กรุณารอสักครู่แล้วลองใหม่'
 });
+const publicStatusLimit = createRateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  message: 'ตรวจสอบสถานะถี่เกินไป กรุณารอสักครู่แล้วลองใหม่'
+});
 const publicGeocodeCache = new Map();
 
 const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads');
@@ -118,6 +123,45 @@ router.get('/geocode', publicGeocodeLimit, async (req, res, next) => {
     res.json(value);
   } catch (error) {
     if (error?.name === 'AbortError') return res.status(504).json({ error: 'การค้นหาสถานที่ใช้เวลานานเกินไป กรุณาลองใหม่' });
+    next(error);
+  }
+});
+
+router.post('/status-check', publicStatusLimit, async (req, res, next) => {
+  try {
+    const reportNo = String(req.body.reportNo || '').trim().toUpperCase();
+    if (!/^DRN-\d{8}-\d{6}$/.test(reportNo)) {
+      return res.status(400).json({ error: 'กรุณาระบุเลขที่รายงานให้ถูกต้อง เช่น DRN-20260830-000001' });
+    }
+
+    const [reports] = await pool.execute(
+      'SELECT id, report_no, status, submitted_at FROM reports WHERE report_no = ? LIMIT 1',
+      [reportNo]
+    );
+    if (!reports[0]) return res.status(404).json({ error: 'ไม่พบเลขที่รายงานนี้ กรุณาตรวจสอบแล้วลองใหม่' });
+
+    const report = reports[0];
+    const [history] = await pool.execute(
+      `SELECT new_value AS status, created_at
+       FROM report_history
+       WHERE report_id = ? AND action = 'STATUS_CHANGED'
+       ORDER BY created_at ASC, id ASC`,
+      [report.id]
+    );
+    const updates = [
+      { type: 'REPORT_RECEIVED', status: 'NEW', createdAt: report.submitted_at },
+      ...history.map((item) => ({ type: 'STATUS_CHANGED', status: item.status, createdAt: item.created_at }))
+    ];
+    const lastUpdate = updates.at(-1)?.createdAt || report.submitted_at;
+
+    res.json({
+      reportNo: report.report_no,
+      status: report.status,
+      submittedAt: report.submitted_at,
+      lastUpdatedAt: lastUpdate,
+      updates
+    });
+  } catch (error) {
     next(error);
   }
 });
