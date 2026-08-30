@@ -38,18 +38,20 @@ body {
   border-radius: var(--radius);
   box-shadow: 0 18px 50px rgba(15,23,42,.07);
 }
-.intro-card { position:relative; padding:15px 52px 14px 18px; backdrop-filter:blur(16px); }
+.intro-card { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; backdrop-filter:blur(16px); }
+.intro-copy { min-width:0; }
 .intro-status { display:flex; align-items:center; min-width:0; color:#1f2937; }
-.intro-status strong { font-size:.86rem; font-weight:800; letter-spacing:-.01em; }
-.intro-flow { margin-top:4px; color:#7b8798; font-size:.69rem; font-weight:600; line-height:1.4; }
-.report-admin-menu { position:absolute; right:14px; top:12px; z-index:2; }
-.report-admin-menu summary { width:30px; height:30px; display:grid; place-items:center; cursor:pointer; list-style:none; border:1px solid #dbe3ef; border-radius:10px; background:#fff; color:#64748b; font-size:.82rem; letter-spacing:.08em; box-shadow:0 6px 18px rgba(15,23,42,.06); }
+.intro-status strong { font-size:.9rem; font-weight:800; letter-spacing:-.01em; }
+.intro-flow { margin-top:5px; color:#7b8798; font-size:.72rem; font-weight:650; line-height:1.4; white-space:nowrap; }
+.intro-actions { flex:0 0 auto; display:flex; align-items:center; gap:8px; }
+.report-admin-menu { position:relative; z-index:2; }
+.report-admin-menu summary { width:38px; height:38px; display:grid; place-items:center; cursor:pointer; list-style:none; border:1px solid #dbe3ef; border-radius:12px; background:#fff; color:#64748b; font-size:.82rem; letter-spacing:.08em; box-shadow:0 6px 18px rgba(15,23,42,.06); }
 .report-admin-menu summary::-webkit-details-marker { display:none; }
 .report-admin-menu[open] summary { color:var(--primary); border-color:#bfdbfe; background:#eff6ff; }
-.report-login-link { position:absolute; right:0; top:36px; width:max-content; margin:0; padding:8px 10px; color:#334155; background:#fff; border:1px solid #dbe3ef; border-radius:10px; box-shadow:0 12px 26px rgba(15,23,42,.12); font-size:.72rem; font-weight:750; text-decoration:none; white-space:nowrap; }
+.report-login-link { position:absolute; right:0; top:44px; width:max-content; margin:0; padding:9px 11px; color:#334155; background:#fff; border:1px solid #dbe3ef; border-radius:11px; box-shadow:0 12px 26px rgba(15,23,42,.12); font-size:.72rem; font-weight:750; text-decoration:none; white-space:nowrap; }
 .report-login-link:hover { color:var(--primary); }
-.report-status-link { position:absolute; right:54px; top:12px; min-height:30px; display:inline-flex; align-items:center; padding:0 10px; border:1px solid #bfdbfe; border-radius:10px; background:#eff6ff; color:#1d4ed8; font-size:.7rem; font-weight:800; text-decoration:none; white-space:nowrap; }
-.report-status-link:hover { border-color:#93c5fd; background:#dbeafe; color:#1e40af; }
+.report-status-link { min-height:38px; display:inline-flex; align-items:center; justify-content:center; padding:0 15px; border:1px solid #93c5fd; border-radius:12px; background:#eff6ff; color:#1d4ed8; font-size:.76rem; font-weight:850; text-decoration:none; white-space:nowrap; box-shadow:0 6px 16px rgba(29,78,216,.08); }
+.report-status-link:hover { border-color:#60a5fa; background:#dbeafe; color:#1e40af; }
 .status-dot { display:inline-block; width:8px; height:8px; flex:0 0 auto; border-radius:50%; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.12); margin-right:8px; animation:statusPulse 1.8s ease-in-out infinite; }
 @keyframes statusPulse { 0%,100% { opacity:1; box-shadow:0 0 0 4px rgba(34,197,94,.12); } 50% { opacity:.55; box-shadow:0 0 0 8px rgba(34,197,94,0); } }
 
@@ -182,6 +184,12 @@ textarea.form-control { border-radius:15px; }
 .verified-badge { margin-left:auto; padding:4px 8px; border-radius:99px; background:#dcfce7; color:#15803d; font-size:.72rem; font-weight:800; }
 
 @media (max-width: 767px) {
+  .intro-card { align-items:stretch; flex-direction:column; gap:12px; padding:15px; }
+  .intro-flow { white-space:normal; font-size:.7rem; }
+  .intro-actions { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+  .report-status-link { width:100%; min-height:42px; font-size:.78rem; }
+  .report-admin-menu summary { width:42px; height:42px; }
+  .report-login-link { top:48px; }
   .report-header { padding-left:8px; padding-right:8px; }
   .drone-mark { width:44px; height:44px; }
   .brand-organization { max-width:calc(100vw - 100px); }
