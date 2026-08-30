@@ -52,6 +52,11 @@ body { min-height:100vh; }
 .public-timeline-body strong { display:block; color:#1e293b; font-size:.86rem; }
 .public-timeline-body p { margin:2px 0; color:#64748b; font-size:.74rem; line-height:1.5; }
 .public-timeline-body time { display:block; color:#94a3b8; font-size:.66rem; }
+.public-timeline-item.officer-message .public-timeline-dot,
+.public-timeline-item.officer-message.latest .public-timeline-dot { background:#7c3aed; box-shadow:0 0 0 1px #c4b5fd,0 0 0 6px rgba(124,58,237,.07); }
+.public-timeline-item.officer-message .public-timeline-body { margin-top:-3px; padding:10px 12px; border:1px solid #ddd6fe; border-radius:13px; background:#f5f3ff; }
+.public-timeline-item.officer-message .public-timeline-body strong { color:#6d28d9; }
+.public-timeline-item.officer-message .public-timeline-body p { margin:4px 0; color:#4c1d95; white-space:pre-wrap; overflow-wrap:anywhere; }
 
 .status-result-actions { display:flex; justify-content:flex-end; gap:9px; flex-wrap:wrap; margin-top:24px; padding-top:18px; border-top:1px solid #e5eaf1; }
 .status-result-actions .btn { min-width:130px; }

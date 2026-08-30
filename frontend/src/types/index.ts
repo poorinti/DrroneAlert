@@ -7,5 +7,6 @@ export interface ReportSummary { id: number; report_no: string; source: string; 
 export interface ReportDetail extends ReportSummary { direction?: string; speed_estimate?: string; altitude_estimate?: string; distance_estimate?: string; object_count?: number; appearance_notes?: string; reporter_type?: string; line_display_name?: string; reporter_name?: string; organization?: string; phone?: string }
 export interface ReportImage { id: number; file_path: string }
 export interface Note { id: number; note: string; created_at: string; username: string }
+export interface PublicMessage { id: number; message: string; created_at: string; username: string }
 export interface History { id: number; action: string; old_value?: string; new_value?: string; created_at: string; username?: string }
-export interface DetailResponse { report: ReportDetail; images: ReportImage[]; notes: Note[]; history: History[] }
+export interface DetailResponse { report: ReportDetail; images: ReportImage[]; notes: Note[]; publicMessages: PublicMessage[]; history: History[] }

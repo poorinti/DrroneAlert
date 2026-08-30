@@ -43,21 +43,24 @@
     timeline.replaceChildren();
     updates.forEach((update, index) => {
       const config = statuses[update.status] || defaultStatus;
+      const isOfficerMessage = update.type === 'OFFICER_MESSAGE';
       const item = document.createElement('article');
-      item.className = `public-timeline-item${index === updates.length - 1 ? ' latest' : ''}`;
+      item.className = `public-timeline-item${index === updates.length - 1 ? ' latest' : ''}${isOfficerMessage ? ' officer-message' : ''}`;
 
       const dot = document.createElement('span');
       dot.className = 'public-timeline-dot';
-      dot.textContent = index === updates.length - 1 ? '✓' : String(index + 1);
+      dot.textContent = isOfficerMessage ? '✎' : (index === updates.length - 1 ? '✓' : String(index + 1));
 
       const body = document.createElement('div');
       body.className = 'public-timeline-body';
       const title = document.createElement('strong');
-      title.textContent = update.type === 'REPORT_RECEIVED' ? 'ระบบได้รับรายงาน' : config.label;
+      title.textContent = update.type === 'REPORT_RECEIVED'
+        ? 'ระบบได้รับรายงาน'
+        : (isOfficerMessage ? 'ข้อความจากเจ้าหน้าที่' : config.label);
       const description = document.createElement('p');
       description.textContent = update.type === 'REPORT_RECEIVED'
         ? 'บันทึกข้อมูลเข้าสู่ศูนย์รับแจ้งเรียบร้อยแล้ว'
-        : config.detail;
+        : (isOfficerMessage ? update.message : config.detail);
       const time = document.createElement('time');
       time.dateTime = update.createdAt || '';
       time.textContent = formatDate(update.createdAt);

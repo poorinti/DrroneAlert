@@ -6,6 +6,7 @@ const multer = require('multer');
 const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createRateLimit } = require('../middleware/rateLimit');
+const { ensureReportPublicMessagesTable } = require('../services/report-public-messages');
 
 const router = express.Router();
 const reportSubmitLimit = createRateLimit({
@@ -128,16 +129,27 @@ router.get('/geocode', publicGeocodeLimit, async (req, res, next) => {
 });
 
 async function buildPublicStatus(report) {
-  const [history] = await pool.execute(
-    `SELECT new_value AS status, created_at
-     FROM report_history
-     WHERE report_id = ? AND action = 'STATUS_CHANGED'
-     ORDER BY created_at ASC, id ASC`,
-    [report.id]
+  await ensureReportPublicMessagesTable();
+  const [events] = await pool.execute(
+    `SELECT event_type, event_value, created_at
+     FROM (
+       SELECT id AS event_id, 'STATUS_CHANGED' AS event_type, new_value AS event_value, created_at
+       FROM report_history
+       WHERE report_id = ? AND action = 'STATUS_CHANGED'
+       UNION ALL
+       SELECT id AS event_id, 'OFFICER_MESSAGE' AS event_type, message AS event_value, created_at
+       FROM report_public_messages
+       WHERE report_id = ?
+     ) AS public_events
+     ORDER BY created_at ASC, event_id ASC`,
+    [report.id, report.id]
   );
   const updates = [
     { type: 'REPORT_RECEIVED', status: 'NEW', createdAt: report.submitted_at },
-    ...history.map((item) => ({ type: 'STATUS_CHANGED', status: item.status, createdAt: item.created_at }))
+    ...events.map((item) => item.event_type === 'OFFICER_MESSAGE'
+      ? { type: 'OFFICER_MESSAGE', message: String(item.event_value || '').trim(), createdAt: item.created_at }
+      : { type: 'STATUS_CHANGED', status: item.event_value, createdAt: item.created_at })
+      .filter((item) => item.type !== 'OFFICER_MESSAGE' || item.message)
   ];
   return {
     reportNo: report.report_no,

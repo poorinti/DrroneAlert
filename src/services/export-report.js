@@ -16,7 +16,7 @@ const labels = {
   status: { NEW: 'ใหม่', ACKNOWLEDGED: 'รับทราบแล้ว', INVESTIGATING: 'กำลังตรวจสอบ', VERIFIED: 'ยืนยันแล้ว', FALSE_ALARM: 'ไม่ใช่เหตุจริง', RESOLVED: 'ดำเนินการเสร็จสิ้น', CLOSED: 'ปิดเหตุ' },
   reporter: { ANONYMOUS: 'ไม่ระบุตัวตน', PUBLIC: 'บุคคลทั่วไป', OFFICIAL: 'หน่วยงาน' },
   source: { WEB: 'เว็บไซต์', LINE_LIFF: 'LINE' },
-  action: { REPORT_CREATED: 'รับแจ้งเหตุ', STATUS_CHANGED: 'เปลี่ยนสถานะ', SEVERITY_CHANGED: 'ปรับระดับ', NOTE_ADDED: 'เพิ่มหมายเหตุ' },
+  action: { REPORT_CREATED: 'รับแจ้งเหตุ', STATUS_CHANGED: 'เปลี่ยนสถานะ', SEVERITY_CHANGED: 'ปรับระดับ', NOTE_ADDED: 'เพิ่มหมายเหตุ', PUBLIC_MESSAGE_ADDED: 'ส่งข้อความถึงผู้รายงาน' },
 };
 
 function validDate(value) {

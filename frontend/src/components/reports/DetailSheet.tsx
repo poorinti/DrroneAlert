@@ -19,7 +19,7 @@ function Timeline({ title, body, meta }: { title: string; body?: string; meta: s
   return <div className="timeline-item relative min-w-0 max-w-full overflow-hidden pb-4 pl-5 text-[10px]"><i className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white"/><strong className="detail-wrap block min-w-0 max-w-full">{title}</strong>{body && <p className="detail-wrap my-0.5 min-w-0 max-w-full text-slate-600">{body}</p>}<span className="detail-wrap block min-w-0 max-w-full text-[8px] text-muted">{meta}</span></div>;
 }
 
-export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote, onComplete }: {
+export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote, onPublicMessage, onComplete }: {
   open: boolean;
   data: DetailResponse | null;
   loading: boolean;
@@ -27,11 +27,13 @@ export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote
   onClose: () => void;
   onSave: (s: string, v: string) => Promise<void>;
   onNote: (n: string) => Promise<void>;
+  onPublicMessage: (message: string) => Promise<void>;
   onComplete: () => Promise<void>;
 }) {
   const [status, setStatus] = useState('');
   const [severity, setSeverity] = useState('');
   const [note, setNote] = useState('');
+  const [publicMessage, setPublicMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
 
@@ -39,6 +41,7 @@ export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote
     setStatus(data?.report.status || '');
     setSeverity(data?.report.operator_severity || data?.report.reporter_severity || '');
     setNote('');
+    setPublicMessage('');
     setCompleteOpen(false);
   }, [data]);
 
@@ -59,6 +62,11 @@ export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote
     if (!note.trim()) return;
     setSaving(true);
     try { await onNote(note); setNote(''); } finally { setSaving(false); }
+  }
+  async function sendPublicMessage() {
+    if (!publicMessage.trim()) return;
+    setSaving(true);
+    try { await onPublicMessage(publicMessage); setPublicMessage(''); } finally { setSaving(false); }
   }
   async function complete() {
     setSaving(true);
@@ -103,12 +111,19 @@ export function DetailSheet({ open, data, loading, role, onClose, onSave, onNote
                 <h3>การจัดการเหตุ</h3>
                 <div className="grid grid-cols-2 gap-2"><Select value={status} onValueChange={setStatus} placeholder="สถานะ" options={statusOptions}/><Select value={severity} onValueChange={setSeverity} placeholder="ระดับเหตุ" options={severityOptions}/></div>
                 <Button disabled={saving} onClick={save} className="mt-2 w-full">บันทึกสถานะและระดับเหตุ</Button>
-                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-slate-200 p-3 text-xs" placeholder="เพิ่มหมายเหตุสำหรับเจ้าหน้าที่"/>
-                <Button disabled={saving || !note.trim()} onClick={addNote} variant="secondary" className="mt-1 w-full">เพิ่มหมายเหตุ</Button>
+                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-slate-200 p-3 text-xs" placeholder="หมายเหตุภายในสำหรับเจ้าหน้าที่"/>
+                <Button disabled={saving || !note.trim()} onClick={addNote} variant="secondary" className="mt-1 w-full">เพิ่มหมายเหตุภายใน</Button>
+                <div className="mt-3 rounded-2xl border border-violet-200 bg-violet-50 p-3">
+                  <strong className="block text-xs text-violet-800">ข้อความถึงผู้รายงาน</strong>
+                  <p className="mt-1 text-[10px] leading-relaxed text-violet-600">ข้อความนี้จะแสดงในหน้าตรวจสอบสถานะ ผู้แจ้งจะมองเห็นได้</p>
+                  <textarea value={publicMessage} onChange={(event) => setPublicMessage(event.target.value)} rows={3} maxLength={2000} className="mt-2 w-full rounded-xl border border-violet-200 bg-white p-3 text-xs" placeholder="เช่น เจ้าหน้าที่รับเรื่องแล้ว และกำลังประสานหน่วยตรวจสอบพื้นที่"/>
+                  <Button disabled={saving || !publicMessage.trim()} onClick={sendPublicMessage} className="mt-1 w-full">ส่งข้อความถึงผู้รายงาน</Button>
+                </div>
                 {!['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(report.status) && <Button disabled={saving} onClick={() => setCompleteOpen(true)} variant="danger" className="mt-3 w-full">ดำเนินการเสร็จสิ้น</Button>}
               </section>}
 
-              <section className="detail-section"><h3>หมายเหตุเจ้าหน้าที่</h3><div className="timeline-list">{data.notes.length ? data.notes.map((item) => <Timeline key={item.id} title={item.username} body={item.note} meta={formatDate(item.created_at)}/>) : <span className="text-[10px] text-muted">ยังไม่มีหมายเหตุ</span>}</div></section>
+              <section className="detail-section"><h3>หมายเหตุภายในเจ้าหน้าที่</h3><div className="timeline-list">{data.notes.length ? data.notes.map((item) => <Timeline key={item.id} title={item.username} body={item.note} meta={formatDate(item.created_at)}/>) : <span className="text-[10px] text-muted">ยังไม่มีหมายเหตุภายใน</span>}</div></section>
+              <section className="detail-section"><h3>ข้อความที่แจ้งผู้รายงาน</h3><div className="timeline-list">{data.publicMessages?.length ? data.publicMessages.map((item) => <Timeline key={item.id} title="แสดงในหน้าตรวจสอบสถานะ" body={item.message} meta={`${item.username} · ${formatDate(item.created_at)}`}/>) : <span className="text-[10px] text-muted">ยังไม่มีข้อความถึงผู้รายงาน</span>}</div></section>
               <section className="detail-section"><h3>ประวัติการดำเนินการ</h3><div className="timeline-list">{data.history.map((item) => <Timeline key={item.id} title={actionLabels[item.action] || item.action} body={[item.old_value, item.new_value].filter(Boolean).join(' → ')} meta={`${item.username || 'ระบบ'} · ${formatDate(item.created_at)}`}/>)}</div></section>
             </div>
           </>}

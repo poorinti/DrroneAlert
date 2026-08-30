@@ -273,6 +273,13 @@ export default function App() {
     notify('เพิ่มหมายเหตุเรียบร้อย');
   }
 
+  async function addPublicMessage(message: string) {
+    if (!selectedId) return;
+    await api(`/api/admin/reports/${selectedId}/public-messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) });
+    setDetail(await getReport(selectedId));
+    notify('ส่งข้อความถึงผู้รายงานเรียบร้อย');
+  }
+
   async function saveSettings(form: FormData) {
     const next = await api<Settings>('/api/admin/settings', { method: 'POST', body: form });
     setSettings(next);
@@ -462,7 +469,7 @@ export default function App() {
         </section>
       </>}
 
-    <DetailSheet open={selectedId !== null} data={detail} loading={detailLoading} role={user.role} onClose={() => { setSelectedId(null); setDetail(null); }} onSave={saveState} onNote={addNote} onComplete={complete}/>
+    <DetailSheet open={selectedId !== null} data={detail} loading={detailLoading} role={user.role} onClose={() => { setSelectedId(null); setDetail(null); }} onSave={saveState} onNote={addNote} onPublicMessage={addPublicMessage} onComplete={complete}/>
     <SettingsDialog open={settingsOpen} settings={settings} onOpenChange={(open) => { setSettingsOpen(open); if (!open) setSurfacePreview(null); }} onPreview={(patch) => setSurfacePreview((current) => ({ ...(current || {}), ...patch }))} onSave={saveSettings}/>
     <PasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} onSuccess={() => notify('เปลี่ยนรหัสผ่านเรียบร้อย')}/>
     <ExportDialog open={exportOpen} date={date} month={month} rangeFrom={rangeFrom} rangeTo={rangeTo} onOpenChange={setExportOpen} onError={notify}/>

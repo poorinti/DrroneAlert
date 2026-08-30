@@ -8,6 +8,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { createRateLimit } = require('../middleware/rateLimit');
 const { parsePeriod, loadExportData, buildPdf, buildExcel } = require('../services/export-report');
 const { saveGeminiApiKey, geminiKeyStatus } = require('../services/secret-settings');
+const { ensureReportPublicMessagesTable } = require('../services/report-public-messages');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -208,6 +209,7 @@ router.get('/reports', async (req, res, next) => {
 
 router.get('/reports/:id', async (req, res, next) => {
   try {
+    await ensureReportPublicMessagesTable();
     const [rows] = await pool.execute(
       `SELECT r.*, rp.reporter_type, rp.line_display_name, rp.line_picture_url,
               rp.name AS reporter_name, rp.phone, rp.email AS reporter_email, rp.organization
@@ -226,13 +228,18 @@ router.get('/reports/:id', async (req, res, next) => {
        FROM report_notes n JOIN users u ON u.id = n.user_id
        WHERE n.report_id = ? ORDER BY n.created_at DESC`, [req.params.id]
     );
+    const [publicMessages] = await pool.execute(
+      `SELECT m.id, m.message, m.created_at, u.username
+       FROM report_public_messages m JOIN users u ON u.id = m.user_id
+       WHERE m.report_id = ? ORDER BY m.created_at DESC`, [req.params.id]
+    );
     const [history] = await pool.execute(
       `SELECT h.id, h.action, h.old_value, h.new_value, h.created_at, u.username
        FROM report_history h LEFT JOIN users u ON u.id = h.user_id
        WHERE h.report_id = ? ORDER BY h.created_at DESC`, [req.params.id]
     );
 
-    res.json({ report: rows[0], images, notes, history });
+    res.json({ report: rows[0], images, notes, publicMessages, history });
   } catch (error) {
     next(error);
   }
@@ -331,6 +338,29 @@ router.post('/reports/:id/notes', requireRole('SUPER_ADMIN', 'OPERATOR'), async 
     );
     req.app.get('io').to('dashboard').emit('report:updated', { id: Number(req.params.id), noteAdded: true });
     res.status(201).json({ id: result.insertId, note });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/reports/:id/public-messages', requireRole('SUPER_ADMIN', 'OPERATOR'), async (req, res, next) => {
+  try {
+    const message = String(req.body.message || '').trim();
+    if (!message) return res.status(400).json({ error: 'กรุณาระบุข้อความถึงผู้รายงาน' });
+    if (message.length > 2000) return res.status(400).json({ error: 'ข้อความถึงผู้รายงานต้องไม่เกิน 2,000 ตัวอักษร' });
+
+    await ensureReportPublicMessagesTable();
+    const [result] = await pool.execute(
+      'INSERT INTO report_public_messages (report_id, user_id, message) VALUES (?, ?, ?)',
+      [req.params.id, req.session.user.id, message]
+    );
+    await pool.execute(
+      `INSERT INTO report_history (report_id, user_id, action, new_value)
+       VALUES (?, ?, 'PUBLIC_MESSAGE_ADDED', ?)`,
+      [req.params.id, req.session.user.id, message]
+    );
+    req.app.get('io').to('dashboard').emit('report:updated', { id: Number(req.params.id), publicMessageAdded: true });
+    res.status(201).json({ id: result.insertId, message });
   } catch (error) {
     next(error);
   }
