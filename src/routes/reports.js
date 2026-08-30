@@ -127,6 +127,49 @@ router.get('/geocode', publicGeocodeLimit, async (req, res, next) => {
   }
 });
 
+async function buildPublicStatus(report) {
+  const [history] = await pool.execute(
+    `SELECT new_value AS status, created_at
+     FROM report_history
+     WHERE report_id = ? AND action = 'STATUS_CHANGED'
+     ORDER BY created_at ASC, id ASC`,
+    [report.id]
+  );
+  const updates = [
+    { type: 'REPORT_RECEIVED', status: 'NEW', createdAt: report.submitted_at },
+    ...history.map((item) => ({ type: 'STATUS_CHANGED', status: item.status, createdAt: item.created_at }))
+  ];
+  return {
+    reportNo: report.report_no,
+    status: report.status,
+    submittedAt: report.submitted_at,
+    lastUpdatedAt: updates.at(-1)?.createdAt || report.submitted_at,
+    updates
+  };
+}
+
+router.get('/status-line', publicStatusLimit, async (req, res, next) => {
+  try {
+    const lineIdentity = req.session?.lineReporter;
+    if (!lineIdentity || Date.now() - Number(lineIdentity.verifiedAt || 0) >= 8 * 60 * 60 * 1000) {
+      return res.status(401).json({ error: 'กรุณาเปิดหน้านี้ผ่าน LINE เพื่อยืนยันตัวตน' });
+    }
+    const [reports] = await pool.execute(
+      `SELECT r.id, r.report_no, r.status, r.submitted_at
+       FROM reports r
+       INNER JOIN reporters p ON p.id = r.reporter_id
+       WHERE p.line_user_id = ?
+       ORDER BY r.submitted_at DESC, r.id DESC
+       LIMIT 20`,
+      [lineIdentity.lineUserId]
+    );
+    const results = await Promise.all(reports.map(buildPublicStatus));
+    res.json({ reports: results });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/status-check', publicStatusLimit, async (req, res, next) => {
   try {
     const reportNo = String(req.body.reportNo || '').trim().toUpperCase();
@@ -140,27 +183,7 @@ router.post('/status-check', publicStatusLimit, async (req, res, next) => {
     );
     if (!reports[0]) return res.status(404).json({ error: 'ไม่พบเลขที่รายงานนี้ กรุณาตรวจสอบแล้วลองใหม่' });
 
-    const report = reports[0];
-    const [history] = await pool.execute(
-      `SELECT new_value AS status, created_at
-       FROM report_history
-       WHERE report_id = ? AND action = 'STATUS_CHANGED'
-       ORDER BY created_at ASC, id ASC`,
-      [report.id]
-    );
-    const updates = [
-      { type: 'REPORT_RECEIVED', status: 'NEW', createdAt: report.submitted_at },
-      ...history.map((item) => ({ type: 'STATUS_CHANGED', status: item.status, createdAt: item.created_at }))
-    ];
-    const lastUpdate = updates.at(-1)?.createdAt || report.submitted_at;
-
-    res.json({
-      reportNo: report.report_no,
-      status: report.status,
-      submittedAt: report.submitted_at,
-      lastUpdatedAt: lastUpdate,
-      updates
-    });
+    res.json(await buildPublicStatus(reports[0]));
   } catch (error) {
     next(error);
   }

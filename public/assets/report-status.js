@@ -117,6 +117,37 @@
     }
   }
 
+  async function initLineStatus() {
+    if (!window.liff) return false;
+    const config = await fetch('/api/line/config').then((response) => response.json()).catch(() => ({ enabled: false }));
+    if (!config.enabled || !config.liffId) return false;
+    await liff.init({ liffId: config.liffId });
+    if (!liff.isLoggedIn()) return false;
+    const idToken = liff.getIDToken();
+    if (!idToken) return false;
+
+    const verify = await fetch('/api/line/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken })
+    });
+    if (!verify.ok) return false;
+
+    const response = await fetch('/api/reports/status-line');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return false;
+    const reports = Array.isArray(data.reports) ? data.reports : [];
+    if (!reports.length) {
+      showAlert('ยืนยัน LINE แล้ว แต่ยังไม่พบรายงานที่แจ้งด้วยบัญชี LINE นี้', 'info');
+      return true;
+    }
+
+    reportNoInput.value = reports[0].reportNo;
+    hideAlert();
+    renderResult(reports[0]);
+    return true;
+  }
+
   async function initBranding() {
     const branding = await fetch('/api/branding').then((response) => response.json()).catch(() => ({}));
     const title = branding.app_title || 'D DRONE';
@@ -150,5 +181,7 @@
   if (initialReportNo) {
     reportNoInput.value = initialReportNo.toUpperCase();
     checkStatus();
+  } else {
+    initLineStatus().catch(() => false);
   }
 })();
