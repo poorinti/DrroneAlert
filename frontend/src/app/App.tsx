@@ -5,17 +5,18 @@ import { io } from 'socket.io-client';
 import { FilterCard } from '../components/dashboard/FilterCard';
 import { Navbar } from '../components/dashboard/Navbar';
 import { SummaryCard } from '../components/dashboard/SummaryCard';
+import { IncidentInsights } from '../components/dashboard/IncidentInsights';
 import { IncidentMap, type InspectionLocation, type MapCoordinate } from '../components/map/IncidentMap';
 import { DetailSheet } from '../components/reports/DetailSheet';
 import { ExportDialog } from '../components/reports/ExportDialog';
 import { ReportList } from '../components/reports/ReportList';
 import { PasswordDialog } from '../components/settings/PasswordDialog';
 import { SettingsDialog } from '../components/settings/SettingsDialog';
-import { api, geocodePlace, getMe, getNotifications, getReport, getReports, getSettings, getStats, markAllRead, markRead } from '../lib/api';
+import { api, geocodePlace, getIncidentAnalysis, getMe, getNotifications, getReport, getReports, getSettings, getStats, markAllRead, markRead, saveCorrelationDecision } from '../lib/api';
 import { brandingAssetUrl, updateFavicon } from '../lib/branding';
 import { coordinates } from '../lib/coordinates';
 import { isMapStyleId, mapStyles, type MapStyleId } from '../lib/mapStyles';
-import type { DetailResponse, ReportSummary, Settings, Stats, User } from '../types';
+import type { CorrelationCandidate, DetailResponse, IncidentAnalysis, ReportSummary, Settings, Stats, User } from '../types';
 
 const emptyStats: Stats = { total: 0, today: 0, active: 0, critical: 0 };
 const defaultSettings: Settings = {
@@ -65,6 +66,8 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [stats, setStats] = useState(emptyStats);
   const [reports, setReports] = useState<ReportSummary[]>([]);
+  const [analysisWindow, setAnalysisWindow] = useState<15 | 30 | 60>(30);
+  const [analysis, setAnalysis] = useState<IncidentAnalysis>({ windowMinutes: 30, hotZones: [], correlations: [] });
   const [unread, setUnread] = useState<ReportSummary[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<DetailResponse | null>(null);
@@ -126,14 +129,15 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     try {
-      const [rows, nextStats, notifications] = await Promise.all([getReports(query), getStats(), getNotifications()]);
+      const [rows, nextStats, notifications, nextAnalysis] = await Promise.all([getReports(query), getStats(), getNotifications(), getIncidentAnalysis(analysisWindow)]);
       setReports(rows);
       setStats(nextStats);
       setUnread(notifications.reports);
+      setAnalysis(nextAnalysis);
     } catch (error) {
       notify(error instanceof Error ? error.message : 'โหลดข้อมูลไม่สำเร็จ');
     }
-  }, [query, notify]);
+  }, [query, analysisWindow, notify]);
 
   useEffect(() => {
     localStorage.setItem('ddrone-map-style', mapStyle);
@@ -165,16 +169,18 @@ export default function App() {
           return;
         }
         setUser(me.user);
-        const [nextSettings, nextStats, rows, notifications] = await Promise.all([
+        const [nextSettings, nextStats, rows, notifications, nextAnalysis] = await Promise.all([
           getSettings(),
           getStats(),
           getReports(new URLSearchParams('scope=active')),
           getNotifications(),
+          getIncidentAnalysis(30),
         ]);
         setSettings(nextSettings);
         setStats(nextStats);
         setReports(rows);
         setUnread(notifications.reports);
+        setAnalysis(nextAnalysis);
         document.title = `${nextSettings.app_title || 'D DRONE'} · ศูนย์บัญชาการ`;
         updateFavicon(brandingAssetUrl(nextSettings.app_logo_path));
       } catch (error) {
@@ -224,6 +230,9 @@ export default function App() {
       await refresh();
       if (selectedId === Number(event.id)) setDetail(await getReport(Number(event.id)));
     });
+    socket.on('analysis:updated', async () => {
+      await refresh();
+    });
     return () => { socket.disconnect(); };
   }, [user, refresh, selectedId, notify]);
 
@@ -243,6 +252,31 @@ export default function App() {
       notify(error instanceof Error ? error.message : 'โหลดรายละเอียดไม่สำเร็จ');
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  async function selectReportById(id: number) {
+    const known = reports.find((report) => report.id === id)
+      || analysis.correlations.flatMap((item) => [item.reportA, item.reportB]).find((report) => report.id === id);
+    if (known) return selectReport(known);
+    setSelectedId(id);
+    setDetailLoading(true);
+    try {
+      setDetail(await getReport(id));
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'โหลดรายละเอียดไม่สำเร็จ');
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function decideCorrelation(candidate: CorrelationCandidate, decision: 'CONFIRMED' | 'DISMISSED') {
+    try {
+      await saveCorrelationDecision(candidate.reportA.id, candidate.reportB.id, decision);
+      setAnalysis(await getIncidentAnalysis(analysisWindow));
+      notify(decision === 'CONFIRMED' ? 'ยืนยันว่าเหตุมีความเกี่ยวข้องกันแล้ว' : 'ทำเครื่องหมายว่าเหตุไม่เกี่ยวข้องกันแล้ว');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'บันทึกผลการพิจารณาไม่สำเร็จ');
     }
   }
 
@@ -429,8 +463,9 @@ export default function App() {
   if (fatal || !user) return <div className="grid h-screen place-items-center bg-slate-50"><div className="text-center text-sm text-red-600"><AlertCircle className="mx-auto mb-2"/>{fatal || 'ไม่พบบัญชีผู้ใช้'}</div></div>;
 
   return <main className="dashboard-app relative h-screen w-screen overflow-hidden bg-slate-200" style={dashboardStyle}>
-    <IncidentMap reports={reports} selectedId={selectedId} onSelect={selectReport} mapStyle={mapStyle} inspection={inspection} onInspect={inspectMapCoordinate} onCoordinateChange={setLiveCoordinate} onNotify={notify}/>
+    <IncidentMap reports={reports} hotZones={analysis.hotZones} correlations={analysis.correlations} selectedId={selectedId} onSelect={selectReport} mapStyle={mapStyle} inspection={inspection} onInspect={inspectMapCoordinate} onCoordinateChange={setLiveCoordinate} onNotify={notify}/>
     <Navbar user={user} settings={settings} search={search} searchLoading={searchLoading} liveCoordinate={liveCoordinate} unread={unread} mapStyle={mapStyle} onSearch={setSearch} onSearchSubmit={submitSmartSearch} onRefresh={refresh} onSettings={() => setSettingsOpen(true)} onPassword={() => setPasswordOpen(true)} onLogout={logout} onExport={() => setExportOpen(true)} onMapStyle={setMapStyle} onNotification={selectReport} onReadAll={readAll} onMobilePanel={() => setMobilePanelOpen(true)}/>
+    {!historyMode && <IncidentInsights hotZones={analysis.hotZones} correlations={analysis.correlations} windowMinutes={analysisWindow} role={user.role} onWindowChange={setAnalysisWindow} onSelectReport={(id) => { void selectReportById(id); }} onDecision={(candidate, decision) => { void decideCorrelation(candidate, decision); }}/>} 
 
     <div className="dashboard-left-stack pointer-events-none fixed bottom-3 left-3 top-[88px] z-[800] flex w-[350px] max-w-[calc(100vw-24px)] flex-col gap-2.5 sm:bottom-4 sm:left-4 sm:top-[92px] sm:max-w-[calc(100vw-32px)]">
       <div className="pointer-events-auto"><SummaryCard stats={stats}/></div>

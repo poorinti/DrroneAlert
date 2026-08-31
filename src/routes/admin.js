@@ -9,6 +9,7 @@ const { createRateLimit } = require('../middleware/rateLimit');
 const { parsePeriod, loadExportData, buildPdf, buildExcel } = require('../services/export-report');
 const { saveGeminiApiKey, geminiKeyStatus } = require('../services/secret-settings');
 const { ensureReportPublicMessagesTable } = require('../services/report-public-messages');
+const { buildCorrelations, buildHotZones } = require('../services/incident-analysis');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -24,6 +25,7 @@ const defaultOrganizationName = 'ศูนย์ควบคุมและเ�
 const looksLikeMojibake = (value) => /(?:à¸|à¹|Ã|Â|â€|ï¿½)/.test(String(value || ''));
 let settingsTableReady;
 let reportReadsTableReady;
+let reportCorrelationsTableReady;
 
 function ensureSettingsTable() {
   if (!settingsTableReady) {
@@ -63,6 +65,23 @@ function ensureReportReadsTable() {
     ) ENGINE=InnoDB`).catch((error) => { reportReadsTableReady = null; throw error; });
   }
   return reportReadsTableReady;
+}
+
+function ensureReportCorrelationsTable() {
+  if (!reportCorrelationsTableReady) {
+    reportCorrelationsTableReady = pool.query(`CREATE TABLE IF NOT EXISTS report_correlations (
+      report_a_id BIGINT UNSIGNED NOT NULL,
+      report_b_id BIGINT UNSIGNED NOT NULL,
+      decision ENUM('CONFIRMED','DISMISSED') NOT NULL,
+      user_id BIGINT UNSIGNED NOT NULL,
+      decided_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (report_a_id, report_b_id),
+      CONSTRAINT fk_report_correlations_a FOREIGN KEY (report_a_id) REFERENCES reports(id) ON DELETE CASCADE,
+      CONSTRAINT fk_report_correlations_b FOREIGN KEY (report_b_id) REFERENCES reports(id) ON DELETE CASCADE,
+      CONSTRAINT fk_report_correlations_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB`).catch((error) => { reportCorrelationsTableReady = null; throw error; });
+  }
+  return reportCorrelationsTableReady;
 }
 
 const brandingUpload = multer({
@@ -361,6 +380,58 @@ router.post('/reports/:id/public-messages', requireRole('SUPER_ADMIN', 'OPERATOR
     );
     req.app.get('io').to('dashboard').emit('report:updated', { id: Number(req.params.id), publicMessageAdded: true });
     res.status(201).json({ id: result.insertId, message });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/incident-analysis', async (req, res, next) => {
+  try {
+    await ensureReportCorrelationsTable();
+    const windowMinutes = [15, 30, 60].includes(Number(req.query.window)) ? Number(req.query.window) : 30;
+    const [reports] = await pool.query(`SELECT r.id, r.report_no, r.object_type, r.reporter_severity, r.operator_severity,
+      COALESCE(r.operator_severity, r.reporter_severity) AS effective_severity,
+      r.status, r.location_name, r.incident_lat, r.incident_lng, r.direction,
+      r.object_count, r.appearance_notes, r.description, r.occurred_at, r.submitted_at
+      FROM reports r
+      WHERE r.status IN ('NEW','ACKNOWLEDGED','INVESTIGATING','VERIFIED')
+        AND r.incident_lat IS NOT NULL AND r.incident_lng IS NOT NULL
+        AND r.occurred_at >= DATE_SUB(NOW(), INTERVAL 60 MINUTE)
+      ORDER BY r.occurred_at DESC
+      LIMIT 500`);
+    const [decisionRows] = await pool.query(`SELECT report_a_id, report_b_id, decision FROM report_correlations`);
+    const decisions = new Map(decisionRows.map((row) => [`${row.report_a_id}:${row.report_b_id}`, row.decision]));
+    res.json({
+      windowMinutes,
+      hotZones: buildHotZones(reports, windowMinutes),
+      correlations: buildCorrelations(reports, decisions)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/correlations', requireRole('SUPER_ADMIN', 'OPERATOR'), async (req, res, next) => {
+  try {
+    await ensureReportCorrelationsTable();
+    const a = Number(req.body.reportAId);
+    const b = Number(req.body.reportBId);
+    const decision = String(req.body.decision || '').toUpperCase();
+    if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0 || a === b) return res.status(400).json({ error: 'คู่รายงานไม่ถูกต้อง' });
+    if (!['CONFIRMED', 'DISMISSED'].includes(decision)) return res.status(400).json({ error: 'ผลการพิจารณาไม่ถูกต้อง' });
+    const reportAId = Math.min(a, b);
+    const reportBId = Math.max(a, b);
+    const [rows] = await pool.execute('SELECT id FROM reports WHERE id IN (?, ?)', [reportAId, reportBId]);
+    if (rows.length !== 2) return res.status(404).json({ error: 'ไม่พบรายงานที่เลือก' });
+    await pool.execute(`INSERT INTO report_correlations (report_a_id, report_b_id, decision, user_id)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE decision = VALUES(decision), user_id = VALUES(user_id), decided_at = CURRENT_TIMESTAMP`,
+      [reportAId, reportBId, decision, req.session.user.id]);
+    await pool.execute(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
+      VALUES (?, ?, 'REPORT_CORRELATION', ?, ?, ?)`,
+      [req.session.user.id, decision === 'CONFIRMED' ? 'CORRELATION_CONFIRMED' : 'CORRELATION_DISMISSED', `${reportAId}:${reportBId}`, req.ip, req.get('user-agent') || null]);
+    req.app.get('io').to('dashboard').emit('analysis:updated', { reportAId, reportBId, decision });
+    res.json({ ok: true, reportAId, reportBId, decision });
   } catch (error) {
     next(error);
   }

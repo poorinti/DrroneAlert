@@ -1,4 +1,4 @@
-import type { DetailResponse, ReportSummary, Settings, Stats, User } from '../types';
+import type { DetailResponse, IncidentAnalysis, ReportSummary, Settings, Stats, User } from '../types';
 
 export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(url, options);
@@ -15,4 +15,6 @@ export const markRead = (id: number) => api<{ ok: boolean }>(`/api/admin/reports
 export const markAllRead = () => api<{ ok: boolean }>('/api/admin/reports/read-all', { method: 'POST' });
 export const getNotifications = () => api<{ unread_count: number; reports: ReportSummary[] }>('/api/admin/notifications');
 export const getReport = (id: number) => api<DetailResponse>(`/api/admin/reports/${id}`);
+export const getIncidentAnalysis = (windowMinutes: 15 | 30 | 60) => api<IncidentAnalysis>(`/api/admin/incident-analysis?window=${windowMinutes}`);
+export const saveCorrelationDecision = (reportAId: number, reportBId: number, decision: 'CONFIRMED' | 'DISMISSED') => api<{ ok: boolean }>('/api/admin/correlations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reportAId, reportBId, decision }) });
 export const geocodePlace = (query: string) => api<{ display_name: string; lat: number; lng: number }>(`/api/admin/geocode?q=${encodeURIComponent(query)}`);

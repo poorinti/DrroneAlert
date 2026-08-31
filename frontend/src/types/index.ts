@@ -10,3 +10,7 @@ export interface Note { id: number; note: string; created_at: string; username: 
 export interface PublicMessage { id: number; message: string; created_at: string; username: string }
 export interface History { id: number; action: string; old_value?: string; new_value?: string; created_at: string; username?: string }
 export interface DetailResponse { report: ReportDetail; images: ReportImage[]; notes: Note[]; publicMessages: PublicMessage[]; history: History[] }
+export interface HotZone { id: string; lat: number; lng: number; radiusM: number; reportCount: number; criticalCount: number; reportIds: number[]; reportNos: string[]; latestAt: number }
+export type CorrelationDecision = 'CONFIRMED' | 'DISMISSED' | null;
+export interface CorrelationCandidate { id: string; reportA: ReportSummary; reportB: ReportSummary; score: number; timeMinutes: number; distanceM: number; reasons: string[]; decision: CorrelationDecision }
+export interface IncidentAnalysis { windowMinutes: 15 | 30 | 60; hotZones: HotZone[]; correlations: CorrelationCandidate[] }

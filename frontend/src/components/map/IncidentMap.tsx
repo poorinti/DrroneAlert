@@ -1,13 +1,13 @@
 import L from 'leaflet';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, Marker, Pane, Popup, TileLayer, Tooltip, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
+import { Circle, MapContainer, Marker, Pane, Polyline, Popup, TileLayer, Tooltip, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Copy, ExternalLink } from 'lucide-react';
 import { coordinates } from '../../lib/coordinates';
 import { mapStyles, type MapStyleId } from '../../lib/mapStyles';
 import { severityLabels } from '../../lib/labels';
 import { timeAgo } from '../../lib/utils';
-import type { ReportSummary } from '../../types';
+import type { CorrelationCandidate, HotZone, ReportSummary } from '../../types';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { MapAnnotationTools } from './MapAnnotationTools';
@@ -175,8 +175,10 @@ function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLoca
   </Pane>;
 }
 
-export function IncidentMap({ reports, selectedId, onSelect, mapStyle, inspection, onInspect, onCoordinateChange, onNotify }: {
+export function IncidentMap({ reports, hotZones, correlations, selectedId, onSelect, mapStyle, inspection, onInspect, onCoordinateChange, onNotify }: {
   reports: ReportSummary[];
+  hotZones: HotZone[];
+  correlations: CorrelationCandidate[];
   selectedId: number | null;
   onSelect: (report: ReportSummary) => void;
   mapStyle: MapStyleId;
@@ -208,6 +210,12 @@ export function IncidentMap({ reports, selectedId, onSelect, mapStyle, inspectio
       <TileLayer key={activeStyle.id} attribution={activeStyle.attribution} url={activeStyle.url} maxZoom={19} maxNativeZoom={activeStyle.maxNativeZoom} />
       <MapFocus selected={selected} />
       <MapInspector disabled={drawingActive} onCoordinate={onCoordinateChange} onInspect={onInspect}/>
+      <Pane name="hot-zones" style={{ zIndex: 360 }}>
+        {hotZones.map((zone) => <Circle key={zone.id} center={[zone.lat, zone.lng]} radius={zone.radiusM} pathOptions={{ color: zone.criticalCount > 0 ? '#dc2626' : '#f97316', fillColor: zone.criticalCount > 0 ? '#ef4444' : '#fb923c', fillOpacity: .12, weight: 2, dashArray: '6 5' }}><Tooltip sticky><strong>Hot Zone · {zone.reportCount} รายงาน</strong><br/>{zone.criticalCount > 0 ? `Critical ${zone.criticalCount} · ` : ''}{zone.reportNos.slice(0, 4).join(' · ')}</Tooltip></Circle>)}
+      </Pane>
+      <Pane name="correlations" style={{ zIndex: 370 }}>
+        {correlations.filter((item) => item.decision === 'CONFIRMED').map((item) => <Polyline key={item.id} positions={[[Number(item.reportA.incident_lat), Number(item.reportA.incident_lng)], [Number(item.reportB.incident_lat), Number(item.reportB.incident_lng)]]} pathOptions={{ color: '#2563eb', weight: 3, opacity: .7, dashArray: '8 6' }}><Tooltip>ยืนยันความเกี่ยวข้อง · {item.score}%</Tooltip></Polyline>)}
+      </Pane>
       {validReports.map((report) => {
         const severity = effectiveSeverity(report);
         const reportCoordinate = coordinates.pairText(report.incident_lat, report.incident_lng);
