@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
 const sharp = require('sharp');
 const pool = require('../config/database');
+const coordinates = require('../../public/assets/coordinates');
 
 const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads'));
 const regularFont = process.env.PDF_THAI_FONT_REGULAR || '/usr/share/fonts/tlwg/Garuda.otf';
@@ -247,7 +248,7 @@ async function buildPdf(data) {
     const half = (contentWidth - 18) / 2;
     let rowY = doc.y;
     const rows = [
-      [['สถานที่', report.location_name], ['พิกัด', `${report.incident_lat}, ${report.incident_lng}`]],
+      [['สถานที่', report.location_name], ['พิกัด GPS / MGRS', coordinates.pairText(report.incident_lat, report.incident_lng)]],
       [['ผู้แจ้ง', reporterName(report)], ['ประเภทผู้แจ้ง', labels.reporter[report.reporter_type] || display(report.reporter_type)]],
       [['หน่วยงาน', report.reporter_type === 'ANONYMOUS' ? '-' : report.organization], ['แหล่งข้อมูล', labels.source[report.source] || report.source]],
       [['สิ่งที่พบ', labels.object[report.object_type] || report.object_type], ['จำนวน', report.object_count ? `${report.object_count} ลำ` : '-']],
@@ -344,23 +345,23 @@ async function buildExcel(data) {
   workbook.subject = data.period.label;
   const incidents = workbook.addWorksheet('เหตุการณ์', { views: [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }], properties: { defaultRowHeight: 22 } });
   const columns = [
-    ['ลำดับ', 8], ['เลขที่รายงาน', 23], ['วันที่เกิดเหตุ', 14], ['เวลาเกิดเหตุ', 12], ['วันที่รับแจ้ง', 14], ['เวลาแจ้ง', 12], ['แหล่งข้อมูล', 14], ['ประเภทผู้รายงาน', 18], ['ชื่อผู้รายงาน', 22], ['หน่วยงาน', 24], ['เบอร์โทร', 16], ['อีเมล', 24], ['ประเภทวัตถุ', 16], ['จำนวน', 10], ['ระดับผู้แจ้ง', 14], ['ระดับเจ้าหน้าที่', 16], ['สถานะ', 20], ['สถานที่', 28], ['Latitude', 14], ['Longitude', 14], ['ทิศทาง', 16], ['ความเร็วโดยประมาณ', 20], ['ความสูงโดยประมาณ', 20], ['ระยะห่างโดยประมาณ', 20], ['ลักษณะที่พบ', 34], ['รายละเอียด', 42], ['จำนวนรูปภาพ', 14], ['จำนวนหมายเหตุ', 14], ['ระดับที่ใช้สรุป', 16],
+    ['ลำดับ', 8], ['เลขที่รายงาน', 23], ['วันที่เกิดเหตุ', 14], ['เวลาเกิดเหตุ', 12], ['วันที่รับแจ้ง', 14], ['เวลาแจ้ง', 12], ['แหล่งข้อมูล', 14], ['ประเภทผู้รายงาน', 18], ['ชื่อผู้รายงาน', 22], ['หน่วยงาน', 24], ['เบอร์โทร', 16], ['อีเมล', 24], ['ประเภทวัตถุ', 16], ['จำนวน', 10], ['ระดับผู้แจ้ง', 14], ['ระดับเจ้าหน้าที่', 16], ['สถานะ', 20], ['สถานที่', 28], ['Latitude', 14], ['Longitude', 14], ['MGRS', 22], ['ทิศทาง', 16], ['ความเร็วโดยประมาณ', 20], ['ความสูงโดยประมาณ', 20], ['ระยะห่างโดยประมาณ', 20], ['ลักษณะที่พบ', 34], ['รายละเอียด', 42], ['จำนวนรูปภาพ', 14], ['จำนวนหมายเหตุ', 14], ['ระดับที่ใช้สรุป', 16],
   ];
   incidents.columns = columns.map(([header, width]) => ({ header, width }));
   for (const [index, report] of data.reports.entries()) {
     incidents.addRow([
-      index + 1, report.report_no, excelDate(report.occurred_at), excelDate(report.occurred_at), excelDate(report.submitted_at), excelDate(report.submitted_at), labels.source[report.source] || report.source, labels.reporter[report.reporter_type] || report.reporter_type, reporterName(report), report.reporter_type === 'ANONYMOUS' ? null : report.organization, report.reporter_type === 'ANONYMOUS' ? null : report.phone, report.reporter_type === 'ANONYMOUS' ? null : report.reporter_email, labels.object[report.object_type] || report.object_type, report.object_count || null, labels.severity[report.reporter_severity] || report.reporter_severity, labels.severity[report.operator_severity] || null, labels.status[report.status] || report.status, report.location_name, Number(report.incident_lat), Number(report.incident_lng), report.direction, report.speed_estimate, report.altitude_estimate, report.distance_estimate, report.appearance_notes, report.description, Number(report.image_count || 0), Number(report.note_count || 0), labels.severity[report.operator_severity || report.reporter_severity] || null,
+      index + 1, report.report_no, excelDate(report.occurred_at), excelDate(report.occurred_at), excelDate(report.submitted_at), excelDate(report.submitted_at), labels.source[report.source] || report.source, labels.reporter[report.reporter_type] || report.reporter_type, reporterName(report), report.reporter_type === 'ANONYMOUS' ? null : report.organization, report.reporter_type === 'ANONYMOUS' ? null : report.phone, report.reporter_type === 'ANONYMOUS' ? null : report.reporter_email, labels.object[report.object_type] || report.object_type, report.object_count || null, labels.severity[report.reporter_severity] || report.reporter_severity, labels.severity[report.operator_severity] || null, labels.status[report.status] || report.status, report.location_name, Number(report.incident_lat), Number(report.incident_lng), coordinates.toMgrs(report.incident_lat, report.incident_lng), report.direction, report.speed_estimate, report.altitude_estimate, report.distance_estimate, report.appearance_notes, report.description, Number(report.image_count || 0), Number(report.note_count || 0), labels.severity[report.operator_severity || report.reporter_severity] || null,
     ]);
   }
-  incidents.autoFilter = `A1:AB${incidents.rowCount}`;
+  incidents.autoFilter = `A1:AC${incidents.rowCount}`;
   incidents.getRow(1).height = 30;
   incidents.getRow(1).eachCell((cell) => { cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1676D2' } }; cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; cell.border = { bottom: { style: 'thin', color: { argb: 'FFB8C8D8' } } }; });
   incidents.eachRow((row, rowNumber) => { if (rowNumber === 1) return; row.alignment = { vertical: 'top', wrapText: true }; if (rowNumber % 2 === 0) row.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F8FB' } }; }); });
   for (const column of ['C','E']) incidents.getColumn(column).numFmt = 'dd/mm/yyyy';
   for (const column of ['D','F']) incidents.getColumn(column).numFmt = 'hh:mm';
   for (const column of ['S','T']) incidents.getColumn(column).numFmt = '0.0000000';
-  incidents.getColumn('N').numFmt = '0'; incidents.getColumn('AA').numFmt = '0'; incidents.getColumn('AB').numFmt = '0';
-  incidents.getColumn('AC').hidden = true;
+  incidents.getColumn('N').numFmt = '0'; incidents.getColumn('AB').numFmt = '0'; incidents.getColumn('AC').numFmt = '0';
+  incidents.getColumn('AD').hidden = true;
   incidents.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9, margins: { left: .25, right: .25, top: .5, bottom: .5, header: .2, footer: .2 } };
 
   const summary = workbook.addWorksheet('สรุป', { views: [{ showGridLines: false }] });

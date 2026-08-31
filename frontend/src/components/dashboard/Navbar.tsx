@@ -2,6 +2,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Bell, Check, FileDown, Layers3, LoaderCircle, LocateFixed, LogOut, MoreHorizontal, Plus, RefreshCw, Search, Settings, UserRound } from 'lucide-react';
 import { brandingAssetUrl } from '../../lib/branding';
+import { coordinates } from '../../lib/coordinates';
 import { mapStyles, type MapStyleId } from '../../lib/mapStyles';
 import { severityLabels } from '../../lib/labels';
 import { timeAgo } from '../../lib/utils';
@@ -39,7 +40,9 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
 }) {
   const primaryLogo = brandingAssetUrl(settings.app_logo_path);
   const secondaryLogo = brandingAssetUrl(settings.secondary_logo_path);
-  const coordinateText = liveCoordinate ? `${liveCoordinate.lat.toFixed(6)}, ${liveCoordinate.lng.toFixed(6)}` : '--, --';
+  const coordinateText = liveCoordinate ? coordinates.pairText(liveCoordinate.lat, liveCoordinate.lng) : '--, --';
+  const latLngText = liveCoordinate ? coordinates.latLngText(liveCoordinate.lat, liveCoordinate.lng) : '--, --';
+  const mgrsText = liveCoordinate ? coordinates.toMgrs(liveCoordinate.lat, liveCoordinate.lng) : null;
 
   return <><header className="glass dashboard-navbar-surface fixed left-3 right-3 top-3 z-[900] flex h-[66px] items-center gap-2 rounded-[21px] px-2.5 sm:left-4 sm:right-4 sm:gap-3 sm:px-3 lg:gap-4">
     <div className="flex min-w-fit items-center gap-2">
@@ -58,7 +61,7 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
     <div className="navbar-status-strip hidden min-w-0 items-center gap-2 lg:flex">
       <span className="flex shrink-0 items-center gap-1.5 text-[9px] font-bold text-emerald-700"><span className="live-dot"/>ออนไลน์</span>
       <span className="h-4 w-px bg-slate-200"/>
-      <span className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold text-slate-600" title="พิกัดใต้เมาส์บนแผนที่"><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="truncate tabular-nums">{coordinateText}</span></span>
+      <span className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold text-slate-600" title={coordinateText}><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="min-w-0 leading-tight"><span className="block truncate tabular-nums">{latLngText}</span>{mgrsText && <small className="block truncate font-mono text-[8px] font-bold text-blue-700">MGRS {mgrsText}</small>}</span></span>
     </div>
 
     <label className="relative ml-auto hidden min-w-0 flex-1 md:block md:max-w-sm xl:max-w-md">
@@ -142,6 +145,6 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
       <Button variant="secondary" size="icon" className="h-10 w-10 rounded-xl bg-white/90" onClick={onMobilePanel} aria-label="เปิดข้อมูลและเมนู"><MoreHorizontal size={20}/></Button>
     </div>
   </header>
-  {liveCoordinate && <div className="mobile-gps-pill fixed right-3 top-[84px] z-[880] flex items-center gap-1.5 rounded-full border border-white/80 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-slate-600 shadow-lg backdrop-blur-md lg:hidden" title="พิกัดที่กำลังตรวจสอบ"><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="tabular-nums">{coordinateText}</span></div>}
+  {liveCoordinate && <div className="mobile-gps-pill fixed right-3 top-[84px] z-[880] flex max-w-[calc(100vw-24px)] items-center gap-1.5 rounded-2xl border border-white/80 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-slate-600 shadow-lg backdrop-blur-md lg:hidden" title={coordinateText}><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="min-w-0 leading-tight"><span className="block truncate tabular-nums">{latLngText}</span>{mgrsText && <small className="block truncate font-mono text-[8px] font-bold text-blue-700">MGRS {mgrsText}</small>}</span></div>}
   </>;
 }

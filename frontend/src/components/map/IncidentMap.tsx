@@ -1,8 +1,9 @@
 import L from 'leaflet';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, Marker, Pane, Popup, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, Pane, Popup, TileLayer, Tooltip, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Copy, ExternalLink } from 'lucide-react';
+import { coordinates } from '../../lib/coordinates';
 import { mapStyles, type MapStyleId } from '../../lib/mapStyles';
 import { severityLabels } from '../../lib/labels';
 import { timeAgo } from '../../lib/utils';
@@ -124,7 +125,8 @@ function MapInspector({ disabled, onCoordinate, onInspect }: { disabled: boolean
 function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLocation; onNotify: (message: string) => void }) {
   const map = useMap();
   const markerRef = useRef<L.Marker | null>(null);
-  const coordinate = `${inspection.lat.toFixed(6)}, ${inspection.lng.toFixed(6)}`;
+  const mgrsCoordinate = coordinates.toMgrs(inspection.lat, inspection.lng);
+  const coordinatePair = coordinates.pairText(inspection.lat, inspection.lng);
   const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${inspection.lat},${inspection.lng}`)}`;
 
   useEffect(() => {
@@ -135,11 +137,11 @@ function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLoca
 
   async function copy() {
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(coordinate);
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(coordinatePair);
       else throw new Error('clipboard unavailable');
     } catch {
       const textarea = document.createElement('textarea');
-      textarea.value = coordinate;
+      textarea.value = coordinatePair;
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
@@ -156,8 +158,8 @@ function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLoca
         <div className="gps-popup">
           <strong>พิกัดตำแหน่ง</strong>
           {inspection.label && <p className="gps-popup-label">{inspection.label}</p>}
-          <dl><div><dt>Latitude</dt><dd>{inspection.lat.toFixed(6)}</dd></div><div><dt>Longitude</dt><dd>{inspection.lng.toFixed(6)}</dd></div></dl>
-          <code>{coordinate}</code>
+          <dl><div><dt>Latitude</dt><dd>{inspection.lat.toFixed(6)}</dd></div><div><dt>Longitude</dt><dd>{inspection.lng.toFixed(6)}</dd></div><div><dt>MGRS</dt><dd>{mgrsCoordinate || '-'}</dd></div></dl>
+          <code>{coordinatePair}</code>
           <div className="gps-popup-actions">
             <button type="button" onClick={copy}><Copy size={13}/>คัดลอกพิกัด</button>
             <a href={googleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>Google Maps</a>
@@ -203,13 +205,16 @@ export function IncidentMap({ reports, selectedId, onSelect, mapStyle, inspectio
       <MapInspector disabled={drawingActive} onCoordinate={onCoordinateChange} onInspect={onInspect}/>
       {validReports.map((report) => {
         const severity = effectiveSeverity(report);
+        const reportCoordinate = coordinates.pairText(report.incident_lat, report.incident_lng);
         return <Marker key={report.id} position={[Number(report.incident_lat), Number(report.incident_lng)]} icon={iconFor(report, report.id === selectedId)} eventHandlers={{ click: () => onSelect(report) }}>
-          <Popup closeButton={false} maxWidth={250}>
-            <div className="w-[230px] overflow-hidden rounded-2xl bg-white">
+          <Tooltip direction="top" offset={[0, -20]} opacity={.96}><strong>{report.report_no}</strong><br/><span className="tabular-nums">{reportCoordinate}</span></Tooltip>
+          <Popup closeButton={false} maxWidth={290}>
+            <div className="w-[270px] overflow-hidden rounded-2xl bg-white">
               {report.cover_image && <img src={`/uploads/${report.cover_image}`} className="h-28 w-full object-cover" alt="ภาพเหตุการณ์" />}
               <div className="p-3">
                 <div className="flex items-center gap-2"><strong className="text-[11px]">{report.report_no}</strong><Badge tone={severity}>{severityLabels[severity]}</Badge></div>
                 <p className="mb-0 mt-2 text-[11px] font-semibold">{report.location_name || 'ไม่ระบุสถานที่'}</p>
+                <p className="mb-0 mt-1 break-words font-mono text-[9px] font-semibold text-blue-700">{reportCoordinate}</p>
                 <span className="text-[9px] text-muted">{timeAgo(report.submitted_at)}</span>
                 <Button size="sm" className="mt-2 w-full" onClick={() => onSelect(report)}>ดูรายละเอียด</Button>
               </div>

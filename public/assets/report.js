@@ -27,6 +27,7 @@
 
   const $ = (selector) => document.querySelector(selector);
   const formValue = (name) => form.elements[name]?.value?.trim?.() ?? form.elements[name]?.value ?? '';
+  const coordinates = window.DroneCoordinates;
 
   async function initLineIdentity() {
     if (!window.liff) return;
@@ -355,7 +356,7 @@
     }
     document.getElementById('incidentLat').value = Number(lat).toFixed(7);
     document.getElementById('incidentLng').value = Number(lng).toFixed(7);
-    document.getElementById('coordinateText').textContent = `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+    document.getElementById('coordinateText').textContent = coordinates.pairText(lat, lng);
     if (center) map.flyTo([lat, lng], Math.max(map.getZoom(), 16), { duration: .7 });
   }
 
@@ -447,14 +448,14 @@
 
   function buildReview() {
     const reporterType = formValue('reporterType');
-    const coordinates = formValue('incidentLat') && formValue('incidentLng')
-      ? `${Number(formValue('incidentLat')).toFixed(6)}, ${Number(formValue('incidentLng')).toFixed(6)}`
+    const coordinatePair = formValue('incidentLat') && formValue('incidentLng')
+      ? coordinates.pairText(formValue('incidentLat'), formValue('incidentLng'))
       : '-';
     const items = [
       ['ผู้รายงาน', reporterType === 'ANONYMOUS' ? 'ไม่ระบุตัวตน' : (formValue('reporterName') || labelReporter(reporterType))],
       ['ประเภทผู้รายงาน', labelReporter(reporterType)],
       ['วัน / เวลา', formValue('occurredAt') ? new Date(formValue('occurredAt')).toLocaleString('th-TH') : '-'],
-      ['ตำแหน่ง', coordinates],
+      ['พิกัด GPS / MGRS', coordinatePair],
       ['สถานที่', formValue('locationName') || '-'],
       ['ประเภทที่พบ', labelObject(formValue('objectType'))],
       ['ระดับที่ผู้แจ้งประเมิน', labelSeverity(formValue('reporterSeverity'))],

@@ -54,6 +54,9 @@ app.use('/uploads', requireAuth, express.static(uploadRoot, {
   maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
   dotfiles: 'deny'
 }));
+app.get('/vendor/mgrs.min.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'node_modules', 'mgrs', 'dist', 'mgrs.min.js'));
+});
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/', (req, res) => res.redirect('/report/'));
