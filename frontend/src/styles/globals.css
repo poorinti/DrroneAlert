@@ -18,7 +18,10 @@
   .dashboard-panel-control { background: var(--panel-control-bg, rgba(255,255,255,.96)) !important; }
   .dashboard-report-row { background: var(--panel-row-bg, #fff) !important; }
   .live-dot { width: 8px; height: 8px; border-radius: 999px; background: #2caf70; box-shadow: 0 0 0 5px rgba(44,175,112,.13); animation: soft-pulse 2.2s infinite; }
-  .navbar-status-strip { max-width: 210px; border: 1px solid rgba(148,163,184,.32); border-radius: 12px; background: rgba(255,255,255,.98); padding: 6px 9px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
+  .navbar-status-strip { width: 292px; max-width: 292px; flex: 0 0 292px; border: 1px solid rgba(148,163,184,.32); border-radius: 12px; background: rgba(255,255,255,.98); padding: 6px 9px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
+  .navbar-coordinate-lines { min-width: 0; white-space: nowrap; }
+  .navbar-coordinate-lines > span,
+  .navbar-coordinate-lines > small { overflow: visible; text-overflow: clip; white-space: nowrap; }
   .navbar-mobile-title, .navbar-mobile-actions, .mobile-dashboard-overlay, .mobile-dashboard-sheet { display: none; }
   .legend { display: inline-block; width: 7px; height: 7px; border-radius: 999px; margin-right: 4px; }
   .loading-dot { width: 12px; height: 12px; border-radius: 999px; background: #0878ff; box-shadow: 0 0 0 7px rgba(8,120,255,.12); animation: soft-pulse 1.5s infinite; }
@@ -101,17 +104,21 @@
 .gps-inspection-marker:before { width: 20px; height: 2px; border-radius: 2px; }
 .gps-inspection-marker:after { width: 2px; height: 20px; border-radius: 2px; }
 .gps-inspection-marker span { position: absolute; left: 50%; top: 50%; z-index: 1; width: 7px; height: 7px; border: 2px solid white; border-radius: 999px; background: #0878ff; transform: translate(-50%,-50%); }
-.gps-popup { width: 245px; padding: 13px; color: #263342; font-family: 'Noto Sans Thai',sans-serif; }
+.gps-popup { width: 280px; padding: 13px; color: #263342; font-family: 'Noto Sans Thai',sans-serif; }
 .gps-popup>strong { display: block; font-size: 12px; }
 .gps-popup-label { margin: 5px 0 8px; color: #526277; font-size: 9px; line-height: 1.45; }
 .gps-popup dl { margin: 8px 0; }
 .gps-popup dl div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 9px; }
 .gps-popup dt { color: #718096; }
 .gps-popup dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
-.gps-popup code { display: block; border-radius: 9px; background: #f1f5f9; padding: 7px 8px; color: #0878df; font: 700 10px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; text-align: center; }
-.gps-popup-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 9px; }
-.gps-popup-actions button,.gps-popup-actions a { display: flex; min-height: 31px; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 9px; background: #eaf3ff; color: #0878df; font-size: 8.5px; font-weight: 700; text-decoration: none; cursor: pointer; }
-.gps-popup-actions button:hover,.gps-popup-actions a:hover { background: #dcecff; }
+.gps-popup code { display: block; margin-top: 8px; overflow-wrap: anywhere; border-radius: 9px; background: #f1f5f9; padding: 7px 8px; color: #0878df; font: 700 10px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; text-align: center; }
+.gps-popup-precision { display: grid; grid-template-columns: minmax(0,1fr) 92px; align-items: center; gap: 8px; margin: 8px 0; color: #64748b; font-size: 9px; font-weight: 700; }
+.gps-popup-precision select { min-width: 0; border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 5px 7px; color: #334155; font-size: 9px; font-weight: 700; }
+.gps-popup-copy-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin-top: 9px; }
+.gps-popup-copy-grid button,.gps-popup-actions button,.gps-popup-actions a { display: flex; min-height: 31px; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 9px; background: #eaf3ff; color: #0878df; font-size: 8.5px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.gps-popup-copy-grid button:hover,.gps-popup-actions button:hover,.gps-popup-actions a:hover { background: #dcecff; }
+.gps-popup-copy-grid button:disabled { cursor: not-allowed; opacity: .45; }
+.gps-popup-actions { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px; }
 
 .detail-wrap { overflow-wrap: anywhere; word-break: break-word; }
 .detail-sheet,.detail-sheet-scroll,.detail-sheet-body,.detail-row,.timeline-list,.timeline-item { min-width: 0; max-width: 100%; }

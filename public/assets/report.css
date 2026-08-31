@@ -122,14 +122,27 @@ textarea.form-control { border-radius:15px; }
 .map-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .report-location-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .location-action-btn { height:42px; padding:0 14px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; font-size:.88rem; font-weight:750; }
-.coordinate-chip { padding:10px 13px; border-radius:12px; background:#f1f5f9; color:#475569; font-size:.86rem; font-variant-numeric:tabular-nums; }
+.coordinate-chip { max-width:100%; padding:10px 13px; border-radius:12px; background:#f1f5f9; color:#475569; font-size:.86rem; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.mgrs-entry { display:grid; grid-template-columns:minmax(0,1fr) 140px auto; gap:8px; align-items:end; }
+.mgrs-entry-field,.mgrs-precision-field { display:flex; min-width:0; flex-direction:column; gap:5px; color:#64748b; font-size:.72rem; font-weight:800; }
+.mgrs-entry input { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; text-transform:uppercase; }
+.mgrs-entry .btn { min-height:42px; white-space:nowrap; }
+.coordinate-copy-actions { display:flex; flex-wrap:wrap; gap:7px; }
+.coordinate-copy-actions .btn { min-height:36px; padding:6px 11px; border:1px solid #dbe3ef; color:#475569; font-size:.74rem; font-weight:800; }
+.coordinate-copy-actions .btn:hover { border-color:#93c5fd; background:#eff6ff; color:#1d4ed8; }
+.mgrs-status.success { color:#15803d; }
+.mgrs-status.error { color:#b91c1c; }
 .report-map { width:100%; height:390px; border-radius:18px; overflow:hidden; border:1px solid #dbe3ef; background:#e2e8f0; }
 
 @media (max-width: 767.98px) {
   .map-toolbar { align-items:stretch; }
   .report-location-actions { width:100%; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
   .location-action-btn { width:100%; height:40px; padding:0 8px; border-radius:12px; font-size:.78rem; }
-  .coordinate-chip { width:fit-content; max-width:100%; padding:8px 11px; font-size:.78rem; }
+  .coordinate-chip { width:100%; max-width:100%; padding:8px 11px; font-size:.76rem; }
+  .mgrs-entry { grid-template-columns:minmax(0,1fr) 112px; }
+  .mgrs-entry .btn { grid-column:1 / -1; width:100%; }
+  .coordinate-copy-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .coordinate-copy-actions .btn { min-width:0; padding:6px 4px; font-size:.68rem; }
 }
 .place-search-status { margin-top:10px; color:#64748b; font-size:.78rem; font-weight:650; }
 .place-search-results { display:flex; gap:8px; overflow-x:auto; margin-top:9px; padding-bottom:2px; scrollbar-width:thin; }

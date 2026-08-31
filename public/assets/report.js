@@ -19,6 +19,14 @@
   const searchPlaceBtn = document.getElementById('searchPlaceBtn');
   const placeSearchStatus = document.getElementById('placeSearchStatus');
   const placeSearchResults = document.getElementById('placeSearchResults');
+  const mgrsInput = document.getElementById('mgrsInput');
+  const mgrsPrecision = document.getElementById('mgrsPrecision');
+  const applyMgrsBtn = document.getElementById('applyMgrsBtn');
+  const mgrsStatus = document.getElementById('mgrsStatus');
+  const coordinateCopyActions = document.getElementById('coordinateCopyActions');
+  const copyGpsBtn = document.getElementById('copyGpsBtn');
+  const copyMgrsBtn = document.getElementById('copyMgrsBtn');
+  const copyBothBtn = document.getElementById('copyBothBtn');
   let currentStep = 1;
   let selectedFiles = [];
   let map;
@@ -344,6 +352,76 @@
     map.on('click', (event) => setIncidentPoint(event.latlng.lat, event.latlng.lng, true));
   }
 
+  function setMgrsStatus(message = '', type = 'info') {
+    if (!mgrsStatus) return;
+    mgrsStatus.textContent = message;
+    mgrsStatus.className = message ? `place-search-status mgrs-status ${type}` : 'place-search-status d-none';
+  }
+
+  async function copyCoordinateText(value, label) {
+    if (!value || value === '-') return;
+    try {
+      if (navigator.clipboard?.writeText && window.isSecureContext) await navigator.clipboard.writeText(value);
+      else {
+        const field = document.createElement('textarea');
+        field.value = value;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        if (!copied) throw new Error('copy failed');
+      }
+      setMgrsStatus(`คัดลอก${label}แล้ว`, 'success');
+    } catch {
+      setMgrsStatus(`คัดลอก${label}ไม่สำเร็จ`, 'error');
+    }
+  }
+
+  function currentCoordinateTexts() {
+    const lat = Number(document.getElementById('incidentLat').value);
+    const lng = Number(document.getElementById('incidentLng').value);
+    const point = coordinates.finiteCoordinate(lat, lng);
+    if (!point) return null;
+    const precision = Number(mgrsPrecision?.value || 5);
+    const gps = coordinates.latLngText(point.lat, point.lng);
+    const mgrs = coordinates.toMgrs(point.lat, point.lng, precision);
+    return { gps, mgrs, both: mgrs ? `${gps} · MGRS ${mgrs}` : gps };
+  }
+
+  function refreshCoordinateDisplay() {
+    const texts = currentCoordinateTexts();
+    if (!texts) {
+      document.getElementById('coordinateText').textContent = 'ยังไม่ได้ปักตำแหน่ง';
+      if (coordinateCopyActions) coordinateCopyActions.hidden = true;
+      return;
+    }
+    document.getElementById('coordinateText').textContent = texts.both;
+    if (mgrsInput && document.activeElement !== mgrsInput) mgrsInput.value = texts.mgrs || '';
+    if (coordinateCopyActions) coordinateCopyActions.hidden = false;
+    if (copyMgrsBtn) copyMgrsBtn.disabled = !texts.mgrs;
+  }
+
+  function applyMgrsCoordinate() {
+    const raw = mgrsInput?.value || '';
+    const validation = coordinates.validateMgrs(raw);
+    if (!validation.valid) {
+      setMgrsStatus(validation.error || 'รูปแบบ MGRS ไม่ถูกต้อง', 'error');
+      mgrsInput?.focus();
+      return;
+    }
+    const parsed = coordinates.fromMgrs(raw);
+    if (!parsed) {
+      setMgrsStatus('ไม่สามารถแปลงพิกัด MGRS นี้ได้', 'error');
+      return;
+    }
+    if (mgrsInput) mgrsInput.value = parsed.mgrs || raw.toUpperCase();
+    setIncidentPoint(parsed.lat, parsed.lng, true);
+    setMgrsStatus('แปลง MGRS และปักหมุดบนแผนที่แล้ว', 'success');
+  }
+
   function setIncidentPoint(lat, lng, center = false) {
     if (!incidentMarker) {
       incidentMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
@@ -356,7 +434,7 @@
     }
     document.getElementById('incidentLat').value = Number(lat).toFixed(7);
     document.getElementById('incidentLng').value = Number(lng).toFixed(7);
-    document.getElementById('coordinateText').textContent = coordinates.pairText(lat, lng);
+    refreshCoordinateDisplay();
     if (center) map.flyTo([lat, lng], Math.max(map.getZoom(), 16), { duration: .7 });
   }
 
@@ -449,7 +527,7 @@
   function buildReview() {
     const reporterType = formValue('reporterType');
     const coordinatePair = formValue('incidentLat') && formValue('incidentLng')
-      ? coordinates.pairText(formValue('incidentLat'), formValue('incidentLng'))
+      ? coordinates.pairText(formValue('incidentLat'), formValue('incidentLng'), { precision: Number(mgrsPrecision?.value || 5) })
       : '-';
     const items = [
       ['ผู้รายงาน', reporterType === 'ANONYMOUS' ? 'ไม่ระบุตัวตน' : (formValue('reporterName') || labelReporter(reporterType))],
@@ -561,6 +639,29 @@
   document.querySelectorAll('input[name="objectType"]').forEach((el) => el.addEventListener('change', setObjectTypeUI));
   document.getElementById('locateBtn').addEventListener('click', locateMe);
   searchPlaceBtn.addEventListener('click', () => searchAndPinPlace(formValue('locationName')));
+  applyMgrsBtn?.addEventListener('click', applyMgrsCoordinate);
+  mgrsInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyMgrsCoordinate();
+    }
+  });
+  mgrsPrecision?.addEventListener('change', () => {
+    refreshCoordinateDisplay();
+    if (currentStep === 3) buildReview();
+  });
+  copyGpsBtn?.addEventListener('click', () => {
+    const texts = currentCoordinateTexts();
+    if (texts) copyCoordinateText(texts.gps, ' GPS');
+  });
+  copyMgrsBtn?.addEventListener('click', () => {
+    const texts = currentCoordinateTexts();
+    if (texts?.mgrs) copyCoordinateText(texts.mgrs, ' MGRS');
+  });
+  copyBothBtn?.addEventListener('click', () => {
+    const texts = currentCoordinateTexts();
+    if (texts) copyCoordinateText(texts.both, 'พิกัดทั้งคู่');
+  });
   aiSmartBtn.addEventListener('click', runAiSmartFill);
   fileInput.addEventListener('change', handleFiles);
   form.addEventListener('submit', submitReport);

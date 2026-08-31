@@ -125,8 +125,10 @@ function MapInspector({ disabled, onCoordinate, onInspect }: { disabled: boolean
 function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLocation; onNotify: (message: string) => void }) {
   const map = useMap();
   const markerRef = useRef<L.Marker | null>(null);
-  const mgrsCoordinate = coordinates.toMgrs(inspection.lat, inspection.lng);
-  const coordinatePair = coordinates.pairText(inspection.lat, inspection.lng);
+  const [mgrsPrecision, setMgrsPrecision] = useState(5);
+  const latLngCoordinate = coordinates.latLngText(inspection.lat, inspection.lng);
+  const mgrsCoordinate = coordinates.toMgrs(inspection.lat, inspection.lng, mgrsPrecision);
+  const coordinatePair = coordinates.pairText(inspection.lat, inspection.lng, { precision: mgrsPrecision });
   const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${inspection.lat},${inspection.lng}`)}`;
 
   useEffect(() => {
@@ -135,13 +137,13 @@ function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLoca
     return () => window.clearTimeout(timer);
   }, [inspection.token, inspection.lat, inspection.lng, inspection.fly, map]);
 
-  async function copy() {
+  async function copyText(value: string, label: string) {
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(coordinatePair);
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
       else throw new Error('clipboard unavailable');
     } catch {
       const textarea = document.createElement('textarea');
-      textarea.value = coordinatePair;
+      textarea.value = value;
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
@@ -149,21 +151,24 @@ function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLoca
       document.execCommand('copy');
       textarea.remove();
     }
-    onNotify('คัดลอกพิกัดแล้ว');
+    onNotify(`คัดลอก${label}แล้ว`);
   }
 
   return <Pane name="gps-inspection" style={{ zIndex: 710 }}>
     <Marker ref={markerRef} position={[inspection.lat, inspection.lng]} icon={inspectionIcon} pane="gps-inspection">
-      <Popup minWidth={245} maxWidth={290} closeButton>
+      <Popup minWidth={280} maxWidth={330} closeButton>
         <div className="gps-popup">
           <strong>พิกัดตำแหน่ง</strong>
           {inspection.label && <p className="gps-popup-label">{inspection.label}</p>}
           <dl><div><dt>Latitude</dt><dd>{inspection.lat.toFixed(6)}</dd></div><div><dt>Longitude</dt><dd>{inspection.lng.toFixed(6)}</dd></div><div><dt>MGRS</dt><dd>{mgrsCoordinate || '-'}</dd></div></dl>
+          <label className="gps-popup-precision">ความละเอียด MGRS<select value={mgrsPrecision} onChange={(event) => setMgrsPrecision(Number(event.target.value))}>{coordinates.precisionOptions.map((option) => <option key={option.precision} value={option.precision}>{option.label}</option>)}</select></label>
           <code>{coordinatePair}</code>
-          <div className="gps-popup-actions">
-            <button type="button" onClick={copy}><Copy size={13}/>คัดลอกพิกัด</button>
-            <a href={googleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>Google Maps</a>
+          <div className="gps-popup-copy-grid">
+            <button type="button" onClick={() => copyText(latLngCoordinate, ' GPS')}><Copy size={12}/>GPS</button>
+            <button type="button" disabled={!mgrsCoordinate} onClick={() => mgrsCoordinate && copyText(mgrsCoordinate, ' MGRS')}><Copy size={12}/>MGRS</button>
+            <button type="button" onClick={() => copyText(coordinatePair, 'พิกัดทั้งคู่')}><Copy size={12}/>ทั้งคู่</button>
           </div>
+          <div className="gps-popup-actions"><a href={googleUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>Google Maps</a></div>
         </div>
       </Popup>
     </Marker>

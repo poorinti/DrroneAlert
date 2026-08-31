@@ -13,6 +13,7 @@ import { PasswordDialog } from '../components/settings/PasswordDialog';
 import { SettingsDialog } from '../components/settings/SettingsDialog';
 import { api, geocodePlace, getMe, getNotifications, getReport, getReports, getSettings, getStats, markAllRead, markRead } from '../lib/api';
 import { brandingAssetUrl, updateFavicon } from '../lib/branding';
+import { coordinates } from '../lib/coordinates';
 import { isMapStyleId, mapStyles, type MapStyleId } from '../lib/mapStyles';
 import type { DetailResponse, ReportSummary, Settings, Stats, User } from '../types';
 
@@ -337,6 +338,23 @@ export default function App() {
       const coordinate = { lat, lng };
       setLiveCoordinate(coordinate);
       setInspection({ ...coordinate, fly: true, token: Date.now() });
+      return;
+    }
+
+    const mgrsValidation = coordinates.validateMgrs(queryText);
+    if (mgrsValidation.valid) {
+      const parsed = coordinates.fromMgrs(queryText);
+      if (!parsed) {
+        notify('ไม่สามารถแปลงพิกัด MGRS นี้ได้');
+        return;
+      }
+      const coordinate = { lat: parsed.lat, lng: parsed.lng };
+      setLiveCoordinate(coordinate);
+      setInspection({ ...coordinate, label: `MGRS ${parsed.mgrs || queryText.toUpperCase()}`, fly: true, token: Date.now() });
+      return;
+    }
+    if (/^\s*\d{1,2}[C-HJ-NP-X]/i.test(queryText)) {
+      notify(mgrsValidation.error || 'รูปแบบ MGRS ไม่ถูกต้อง');
       return;
     }
 

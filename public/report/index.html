@@ -93,6 +93,13 @@
             <div class="col-12 col-md-6"><label class="form-label">ชื่อสถานที่</label><input class="form-control form-control-lg" id="locationName" name="locationName" placeholder="เช่น บริเวณสนามกีฬา / บ้านเลขที่ / จุดสังเกต"></div>
           </div>
           <div class="map-toolbar mt-3"><div class="report-location-actions"><button type="button" class="btn btn-dark location-action-btn" id="locateBtn">⌖ ใช้ตำแหน่งของฉัน</button><button type="button" class="btn btn-outline-primary location-action-btn" id="searchPlaceBtn">⌕ ค้นหาสถานที่</button></div><div class="coordinate-chip" id="coordinateText">ยังไม่ได้ปักตำแหน่ง</div></div>
+          <div class="mgrs-entry mt-2">
+            <label class="mgrs-entry-field"><span>พิกัด MGRS</span><input id="mgrsInput" class="form-control" autocomplete="off" placeholder="เช่น 47P PR 62366 21280"></label>
+            <label class="mgrs-precision-field"><span>ความละเอียด</span><select id="mgrsPrecision" class="form-select"><option value="5">1 m</option><option value="4">10 m</option><option value="3">100 m</option><option value="2">1 km</option></select></label>
+            <button type="button" class="btn btn-outline-primary" id="applyMgrsBtn">ปักหมุดจาก MGRS</button>
+          </div>
+          <div class="coordinate-copy-actions mt-2" id="coordinateCopyActions" hidden><button type="button" class="btn btn-light" id="copyGpsBtn">คัดลอก GPS</button><button type="button" class="btn btn-light" id="copyMgrsBtn">คัดลอก MGRS</button><button type="button" class="btn btn-light" id="copyBothBtn">คัดลอกทั้งคู่</button></div>
+          <div id="mgrsStatus" class="place-search-status d-none"></div>
           <div id="placeSearchStatus" class="place-search-status d-none"></div>
           <div id="placeSearchResults" class="place-search-results d-none"></div>
           <div id="reportMap" class="report-map mt-3" aria-label="แผนที่เลือกตำแหน่ง"></div>

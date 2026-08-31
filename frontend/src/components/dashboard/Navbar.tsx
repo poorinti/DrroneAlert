@@ -61,7 +61,7 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
     <div className="navbar-status-strip hidden min-w-0 items-center gap-2 lg:flex">
       <span className="flex shrink-0 items-center gap-1.5 text-[9px] font-bold text-emerald-700"><span className="live-dot"/>ออนไลน์</span>
       <span className="h-4 w-px bg-slate-200"/>
-      <span className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold text-slate-600" title={coordinateText}><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="min-w-0 leading-tight"><span className="block truncate tabular-nums">{latLngText}</span>{mgrsText && <small className="block truncate font-mono text-[8px] font-bold text-blue-700">MGRS {mgrsText}</small>}</span></span>
+      <span className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold text-slate-600" title={coordinateText}><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="navbar-coordinate-lines min-w-0 leading-tight"><span className="block tabular-nums">{latLngText}</span>{mgrsText && <small className="block font-mono text-[8px] font-bold text-blue-700">MGRS {mgrsText}</small>}</span></span>
     </div>
 
     <label className="relative ml-auto hidden min-w-0 flex-1 md:block md:max-w-sm xl:max-w-md">
@@ -145,6 +145,6 @@ export function Navbar({ user, settings, search, searchLoading, liveCoordinate, 
       <Button variant="secondary" size="icon" className="h-10 w-10 rounded-xl bg-white/90" onClick={onMobilePanel} aria-label="เปิดข้อมูลและเมนู"><MoreHorizontal size={20}/></Button>
     </div>
   </header>
-  {liveCoordinate && <div className="mobile-gps-pill fixed right-3 top-[84px] z-[880] flex max-w-[calc(100vw-24px)] items-center gap-1.5 rounded-2xl border border-white/80 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-slate-600 shadow-lg backdrop-blur-md lg:hidden" title={coordinateText}><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="min-w-0 leading-tight"><span className="block truncate tabular-nums">{latLngText}</span>{mgrsText && <small className="block truncate font-mono text-[8px] font-bold text-blue-700">MGRS {mgrsText}</small>}</span></div>}
+  {liveCoordinate && <div className="mobile-gps-pill fixed right-3 top-[84px] z-[880] flex max-w-[calc(100vw-24px)] items-center gap-1.5 rounded-2xl border border-white/80 bg-white/90 px-2.5 py-1.5 text-[9px] font-semibold text-slate-600 shadow-lg backdrop-blur-md lg:hidden" title={coordinateText}><LocateFixed size={12} className="shrink-0 text-blue-500"/><span className="navbar-coordinate-lines min-w-0 leading-tight"><span className="block tabular-nums">{latLngText}</span>{mgrsText && <small className="block font-mono text-[8px] font-bold text-blue-700">MGRS {mgrsText}</small>}</span></div>}
   </>;
 }
