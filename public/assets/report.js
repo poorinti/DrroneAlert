@@ -16,6 +16,7 @@
   const aiSmartStatus = document.getElementById('aiSmartStatus');
   const aiSmartResult = document.getElementById('aiSmartResult');
   const aiSmartModel = document.getElementById('aiSmartModel');
+  const aiMicBtn = document.getElementById('aiMicBtn');
   const searchPlaceBtn = document.getElementById('searchPlaceBtn');
   const placeSearchStatus = document.getElementById('placeSearchStatus');
   const placeSearchResults = document.getElementById('placeSearchResults');
@@ -220,6 +221,82 @@
       aiSmartStatus.className = 'ai-smart-status error';
       aiSmartStatus.textContent = '';
     }
+  }
+
+  function initAiSpeechRecognition() {
+    if (!aiMicBtn) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      aiMicBtn.disabled = true;
+      aiMicBtn.title = 'เบราว์เซอร์นี้ยังไม่รองรับการถอดเสียงจากไมโครโฟน';
+      aiMicBtn.querySelector('.ai-mic-label').textContent = 'ไม่รองรับไมก์';
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'th-TH';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    let listening = false;
+    let committedText = '';
+
+    const stopListening = () => {
+      if (!listening) return;
+      recognition.stop();
+    };
+
+    recognition.addEventListener('start', () => {
+      listening = true;
+      committedText = aiSmartText.value.trim();
+      aiMicBtn.classList.add('listening');
+      aiMicBtn.setAttribute('aria-pressed', 'true');
+      aiMicBtn.querySelector('.ai-mic-label').textContent = 'กำลังฟัง...';
+      aiSmartStatus.className = 'ai-smart-status ready';
+      aiSmartStatus.textContent = 'กำลังฟังเสียง พูดรายละเอียดเหตุการณ์ได้เลย';
+    });
+
+    recognition.addEventListener('result', (event) => {
+      let finalText = '';
+      let interimText = '';
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const transcript = event.results[index][0]?.transcript?.trim() || '';
+        if (event.results[index].isFinal) finalText += `${transcript} `;
+        else interimText += `${transcript} `;
+      }
+      if (finalText.trim()) committedText = [committedText, finalText.trim()].filter(Boolean).join(' ').trim();
+      aiSmartText.value = [committedText, interimText.trim()].filter(Boolean).join(' ').trim();
+      aiSmartText.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    recognition.addEventListener('end', () => {
+      listening = false;
+      aiMicBtn.classList.remove('listening');
+      aiMicBtn.setAttribute('aria-pressed', 'false');
+      aiMicBtn.querySelector('.ai-mic-label').textContent = 'พูด';
+      aiSmartStatus.className = 'ai-smart-status';
+      aiSmartStatus.textContent = aiSmartText.value.trim() ? 'ถอดเสียงแล้ว ตรวจข้อความก่อนให้ AI แยกข้อมูลได้เลย' : '';
+    });
+
+    recognition.addEventListener('error', (event) => {
+      const messages = {
+        'not-allowed': 'กรุณาอนุญาตการใช้ไมโครโฟนในเบราว์เซอร์',
+        'audio-capture': 'ไม่พบไมโครโฟนที่ใช้งานได้',
+        'no-speech': 'ยังไม่ได้ยินเสียง กรุณาลองพูดอีกครั้ง'
+      };
+      aiSmartStatus.className = 'ai-smart-status error';
+      aiSmartStatus.textContent = messages[event.error] || 'ไม่สามารถถอดเสียงได้ กรุณาลองใหม่';
+    });
+
+    aiMicBtn.addEventListener('click', () => {
+      if (listening) return stopListening();
+      if (!window.isSecureContext) {
+        aiSmartStatus.className = 'ai-smart-status error';
+        aiSmartStatus.textContent = 'ไมโครโฟนต้องใช้งานผ่าน HTTPS';
+        return;
+      }
+      try { recognition.start(); }
+      catch (_) { /* recognition may already be starting */ }
+    });
   }
 
   async function runAiSmartFill() {
@@ -675,5 +752,6 @@
   initMap();
   initBranding();
   initAiSmartFill();
+  initAiSpeechRecognition();
   initLineIdentity().catch((error) => console.warn('LINE LIFF init skipped:', error.message));
 })();
