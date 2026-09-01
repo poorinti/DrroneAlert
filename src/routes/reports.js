@@ -7,6 +7,7 @@ const pool = require('../config/database');
 const { requireAuth } = require('../middleware/auth');
 const { createRateLimit } = require('../middleware/rateLimit');
 const { ensureReportPublicMessagesTable } = require('../services/report-public-messages');
+const { getMatchingWatchAreas } = require('../services/watch-areas');
 
 const router = express.Router();
 const reportSubmitLimit = createRateLimit({
@@ -417,7 +418,17 @@ router.post('/', reportSubmitLimit, upload.array('images', 5), async (req, res, 
       imageCount: files.length
     };
 
-    req.app.get('io').to('dashboard').emit('report:new', report);
+    const matchingWatchAreas = await getMatchingWatchAreas(incidentLat, incidentLng).catch(() => []);
+    req.app.get('io').to('dashboard').emit('report:new', { ...report, watchAreas: matchingWatchAreas });
+    for (const area of matchingWatchAreas) {
+      req.app.get('io').to('dashboard').emit('watch-area:alert', {
+        reportId: result.insertId,
+        reportNo,
+        areaId: area.id,
+        areaName: area.name,
+        priority: area.priority
+      });
+    }
     res.status(201).json(report);
   } catch (error) {
     if (conn) await conn.rollback();

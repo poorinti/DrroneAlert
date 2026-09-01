@@ -9,7 +9,7 @@
     "start": "node src/server.js",
     "create-admin": "node scripts/create-admin.js",
     "seed-demo": "node scripts/seed-demo.js",
-    "check": "node --check src/server.js && node --check src/routes/reports.js && node --check src/routes/auth.js && node --check src/routes/admin.js && node --check src/routes/ai.js && node --check src/services/incident-analysis.js && node --check src/services/secret-settings.js && node --check src/services/report-public-messages.js && node --check src/services/export-report.js && node --check scripts/create-admin.js && node --check public/assets/coordinates.js && node --check public/assets/report.js && node --check public/assets/report-status.js",
+    "check": "node --check src/server.js && node --check src/routes/reports.js && node --check src/routes/auth.js && node --check src/routes/admin.js && node --check src/routes/ai.js && node --check src/services/incident-analysis.js && node --check src/services/watch-areas.js && node --check src/services/secret-settings.js && node --check src/services/report-public-messages.js && node --check src/services/export-report.js && node --check scripts/create-admin.js && node --check public/assets/coordinates.js && node --check public/assets/report.js && node --check public/assets/report-status.js",
     "build:frontend": "npm --prefix frontend run build"
   },
   "dependencies": {

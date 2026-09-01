@@ -10,6 +10,7 @@ const { parsePeriod, loadExportData, buildPdf, buildExcel } = require('../servic
 const { saveGeminiApiKey, geminiKeyStatus } = require('../services/secret-settings');
 const { ensureReportPublicMessagesTable } = require('../services/report-public-messages');
 const { buildCorrelations, buildHotZones } = require('../services/incident-analysis');
+const { ensureWatchAreasTable } = require('../services/watch-areas');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -435,6 +436,57 @@ router.post('/correlations', requireRole('SUPER_ADMIN', 'OPERATOR'), async (req,
   } catch (error) {
     next(error);
   }
+});
+
+router.get('/watch-areas', async (req, res, next) => {
+  try {
+    await ensureWatchAreasTable();
+    const [rows] = await pool.query(`SELECT id, name, priority, center_lat, center_lng, radius_m, enabled, created_at, updated_at
+      FROM watch_areas ORDER BY enabled DESC, FIELD(priority, 'CRITICAL','IMPORTANT','NORMAL'), name ASC`);
+    res.json(rows);
+  } catch (error) { next(error); }
+});
+
+router.post('/watch-areas', requireRole('SUPER_ADMIN', 'OPERATOR'), async (req, res, next) => {
+  try {
+    await ensureWatchAreasTable();
+    const name = String(req.body.name || '').trim();
+    const priority = String(req.body.priority || 'NORMAL').toUpperCase();
+    const lat = Number(req.body.centerLat);
+    const lng = Number(req.body.centerLng);
+    const radiusM = Math.round(Number(req.body.radiusM));
+    if (!name || name.length > 120) return res.status(400).json({ error: 'กรุณาระบุชื่อพื้นที่ไม่เกิน 120 ตัวอักษร' });
+    if (!['NORMAL','IMPORTANT','CRITICAL'].includes(priority)) return res.status(400).json({ error: 'ระดับพื้นที่ไม่ถูกต้อง' });
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) return res.status(400).json({ error: 'พิกัดพื้นที่ไม่ถูกต้อง' });
+    if (!Number.isFinite(radiusM) || radiusM < 50 || radiusM > 50000) return res.status(400).json({ error: 'รัศมีต้องอยู่ระหว่าง 50 เมตร ถึง 50 กิโลเมตร' });
+    const [result] = await pool.execute(`INSERT INTO watch_areas (name, priority, center_lat, center_lng, radius_m, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)`, [name, priority, lat, lng, radiusM, req.session.user.id]);
+    await pool.execute(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
+      VALUES (?, 'WATCH_AREA_CREATED', 'WATCH_AREA', ?, ?, ?)`, [req.session.user.id, String(result.insertId), req.ip, req.get('user-agent') || null]);
+    req.app.get('io').to('dashboard').emit('watch-area:updated', { id: result.insertId });
+    res.status(201).json({ id: result.insertId, name, priority, center_lat: lat, center_lng: lng, radius_m: radiusM, enabled: 1 });
+  } catch (error) { next(error); }
+});
+
+router.patch('/watch-areas/:id', requireRole('SUPER_ADMIN', 'OPERATOR'), async (req, res, next) => {
+  try {
+    await ensureWatchAreasTable();
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'พื้นที่ไม่ถูกต้อง' });
+    const [currentRows] = await pool.execute('SELECT * FROM watch_areas WHERE id = ? LIMIT 1', [id]);
+    if (!currentRows[0]) return res.status(404).json({ error: 'ไม่พบพื้นที่เฝ้าระวัง' });
+    const current = currentRows[0];
+    const name = req.body.name === undefined ? current.name : String(req.body.name || '').trim();
+    const priority = req.body.priority === undefined ? current.priority : String(req.body.priority || '').toUpperCase();
+    const enabled = req.body.enabled === undefined ? Boolean(current.enabled) : Boolean(req.body.enabled);
+    if (!name || name.length > 120) return res.status(400).json({ error: 'กรุณาระบุชื่อพื้นที่ไม่เกิน 120 ตัวอักษร' });
+    if (!['NORMAL','IMPORTANT','CRITICAL'].includes(priority)) return res.status(400).json({ error: 'ระดับพื้นที่ไม่ถูกต้อง' });
+    await pool.execute('UPDATE watch_areas SET name = ?, priority = ?, enabled = ? WHERE id = ?', [name, priority, enabled, id]);
+    await pool.execute(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
+      VALUES (?, 'WATCH_AREA_UPDATED', 'WATCH_AREA', ?, ?, ?)`, [req.session.user.id, String(id), req.ip, req.get('user-agent') || null]);
+    req.app.get('io').to('dashboard').emit('watch-area:updated', { id });
+    res.json({ ok: true, id, name, priority, enabled });
+  } catch (error) { next(error); }
 });
 
 const geocodeCache = new Map();

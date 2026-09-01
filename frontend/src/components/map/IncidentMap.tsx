@@ -7,10 +7,11 @@ import { coordinates } from '../../lib/coordinates';
 import { mapStyles, type MapStyleId } from '../../lib/mapStyles';
 import { severityLabels } from '../../lib/labels';
 import { timeAgo } from '../../lib/utils';
-import type { CorrelationCandidate, HotZone, ReportSummary } from '../../types';
+import type { CorrelationCandidate, HotZone, ReportSummary, Role, WatchArea, WatchAreaPriority } from '../../types';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { MapAnnotationTools } from './MapAnnotationTools';
+import { WatchAreaLayer } from './WatchAreaLayer';
 
 export type MapCoordinate = { lat: number; lng: number };
 export type InspectionLocation = MapCoordinate & { label?: string; fly?: boolean; token: number };
@@ -175,16 +176,20 @@ function InspectionMarker({ inspection, onNotify }: { inspection: InspectionLoca
   </Pane>;
 }
 
-export function IncidentMap({ reports, hotZones, correlations, selectedId, onSelect, mapStyle, inspection, onInspect, onCoordinateChange, onNotify }: {
+export function IncidentMap({ reports, hotZones, correlations, watchAreas, role, selectedId, onSelect, mapStyle, inspection, onInspect, onCoordinateChange, onCreateWatchArea, onUpdateWatchArea, onNotify }: {
   reports: ReportSummary[];
   hotZones: HotZone[];
   correlations: CorrelationCandidate[];
+  watchAreas: WatchArea[];
+  role: Role;
   selectedId: number | null;
   onSelect: (report: ReportSummary) => void;
   mapStyle: MapStyleId;
   inspection: InspectionLocation | null;
   onInspect: (coordinate: MapCoordinate) => void;
   onCoordinateChange: (coordinate: MapCoordinate) => void;
+  onCreateWatchArea: (input: { name: string; priority: WatchAreaPriority; centerLat: number; centerLng: number; radiusM: number }) => Promise<void>;
+  onUpdateWatchArea: (id: number, input: { name?: string; priority?: WatchAreaPriority; enabled?: boolean }) => Promise<void>;
   onNotify: (message: string) => void;
 }) {
   const selected = reports.find((report) => report.id === selectedId);
@@ -210,6 +215,7 @@ export function IncidentMap({ reports, hotZones, correlations, selectedId, onSel
       <TileLayer key={activeStyle.id} attribution={activeStyle.attribution} url={activeStyle.url} maxZoom={19} maxNativeZoom={activeStyle.maxNativeZoom} />
       <MapFocus selected={selected} />
       <MapInspector disabled={drawingActive} onCoordinate={onCoordinateChange} onInspect={onInspect}/>
+      <WatchAreaLayer areas={watchAreas} role={role} onCreate={onCreateWatchArea} onUpdate={onUpdateWatchArea} onNotify={onNotify} onDrawingActiveChange={setDrawingActive}/>
       <Pane name="hot-zones" style={{ zIndex: 360 }}>
         {hotZones.map((zone) => <Circle key={zone.id} center={[zone.lat, zone.lng]} radius={zone.radiusM} pathOptions={{ color: zone.criticalCount > 0 ? '#dc2626' : '#f97316', fillColor: zone.criticalCount > 0 ? '#ef4444' : '#fb923c', fillOpacity: .12, weight: 2, dashArray: '6 5' }}><Tooltip sticky><strong>Hot Zone · {zone.reportCount} รายงาน</strong><br/>{zone.criticalCount > 0 ? `Critical ${zone.criticalCount} · ` : ''}{zone.reportNos.slice(0, 4).join(' · ')}</Tooltip></Circle>)}
       </Pane>

@@ -12,11 +12,11 @@ import { ExportDialog } from '../components/reports/ExportDialog';
 import { ReportList } from '../components/reports/ReportList';
 import { PasswordDialog } from '../components/settings/PasswordDialog';
 import { SettingsDialog } from '../components/settings/SettingsDialog';
-import { api, geocodePlace, getIncidentAnalysis, getMe, getNotifications, getReport, getReports, getSettings, getStats, markAllRead, markRead, saveCorrelationDecision } from '../lib/api';
+import { api, createWatchArea, geocodePlace, getIncidentAnalysis, getMe, getNotifications, getReport, getReports, getSettings, getStats, getWatchAreas, markAllRead, markRead, saveCorrelationDecision, updateWatchArea } from '../lib/api';
 import { brandingAssetUrl, updateFavicon } from '../lib/branding';
 import { coordinates } from '../lib/coordinates';
 import { isMapStyleId, mapStyles, type MapStyleId } from '../lib/mapStyles';
-import type { CorrelationCandidate, DetailResponse, IncidentAnalysis, ReportSummary, Settings, Stats, User } from '../types';
+import type { CorrelationCandidate, DetailResponse, IncidentAnalysis, ReportSummary, Settings, Stats, User, WatchArea, WatchAreaAlert, WatchAreaPriority } from '../types';
 
 const emptyStats: Stats = { total: 0, today: 0, active: 0, critical: 0 };
 const defaultSettings: Settings = {
@@ -68,6 +68,7 @@ export default function App() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
   const [analysisWindow, setAnalysisWindow] = useState<15 | 30 | 60>(30);
   const [analysis, setAnalysis] = useState<IncidentAnalysis>({ windowMinutes: 30, hotZones: [], correlations: [] });
+  const [watchAreas, setWatchAreas] = useState<WatchArea[]>([]);
   const [unread, setUnread] = useState<ReportSummary[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<DetailResponse | null>(null);
@@ -129,11 +130,12 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     try {
-      const [rows, nextStats, notifications, nextAnalysis] = await Promise.all([getReports(query), getStats(), getNotifications(), getIncidentAnalysis(analysisWindow)]);
+      const [rows, nextStats, notifications, nextAnalysis, nextWatchAreas] = await Promise.all([getReports(query), getStats(), getNotifications(), getIncidentAnalysis(analysisWindow), getWatchAreas()]);
       setReports(rows);
       setStats(nextStats);
       setUnread(notifications.reports);
       setAnalysis(nextAnalysis);
+      setWatchAreas(nextWatchAreas);
     } catch (error) {
       notify(error instanceof Error ? error.message : 'โหลดข้อมูลไม่สำเร็จ');
     }
@@ -169,18 +171,20 @@ export default function App() {
           return;
         }
         setUser(me.user);
-        const [nextSettings, nextStats, rows, notifications, nextAnalysis] = await Promise.all([
+        const [nextSettings, nextStats, rows, notifications, nextAnalysis, nextWatchAreas] = await Promise.all([
           getSettings(),
           getStats(),
           getReports(new URLSearchParams('scope=active')),
           getNotifications(),
           getIncidentAnalysis(30),
+          getWatchAreas(),
         ]);
         setSettings(nextSettings);
         setStats(nextStats);
         setReports(rows);
         setUnread(notifications.reports);
         setAnalysis(nextAnalysis);
+        setWatchAreas(nextWatchAreas);
         document.title = `${nextSettings.app_title || 'D DRONE'} · ศูนย์บัญชาการ`;
         updateFavicon(brandingAssetUrl(nextSettings.app_logo_path));
       } catch (error) {
@@ -233,6 +237,13 @@ export default function App() {
     socket.on('analysis:updated', async () => {
       await refresh();
     });
+    socket.on('watch-area:updated', async () => {
+      setWatchAreas(await getWatchAreas());
+    });
+    socket.on('watch-area:alert', (event: WatchAreaAlert) => {
+      const level = event.priority === 'CRITICAL' ? 'วิกฤต' : event.priority === 'IMPORTANT' ? 'สำคัญ' : 'เฝ้าระวัง';
+      notify(`รายงาน ${event.reportNo} เข้าเขต ${event.areaName} (${level})`);
+    });
     return () => { socket.disconnect(); };
   }, [user, refresh, selectedId, notify]);
 
@@ -277,6 +288,28 @@ export default function App() {
       notify(decision === 'CONFIRMED' ? 'ยืนยันว่าเหตุมีความเกี่ยวข้องกันแล้ว' : 'ทำเครื่องหมายว่าเหตุไม่เกี่ยวข้องกันแล้ว');
     } catch (error) {
       notify(error instanceof Error ? error.message : 'บันทึกผลการพิจารณาไม่สำเร็จ');
+    }
+  }
+
+  async function addWatchArea(input: { name: string; priority: WatchAreaPriority; centerLat: number; centerLng: number; radiusM: number }) {
+    try {
+      await createWatchArea(input);
+      setWatchAreas(await getWatchAreas());
+      notify('บันทึกเขตเฝ้าระวังแล้ว');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'บันทึกเขตเฝ้าระวังไม่สำเร็จ');
+      throw error;
+    }
+  }
+
+  async function changeWatchArea(id: number, input: { name?: string; priority?: WatchAreaPriority; enabled?: boolean }) {
+    try {
+      await updateWatchArea(id, input);
+      setWatchAreas(await getWatchAreas());
+      notify(input.enabled === false ? 'ปิดเขตเฝ้าระวังแล้ว' : 'อัปเดตเขตเฝ้าระวังแล้ว');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'อัปเดตเขตเฝ้าระวังไม่สำเร็จ');
+      throw error;
     }
   }
 
@@ -463,7 +496,7 @@ export default function App() {
   if (fatal || !user) return <div className="grid h-screen place-items-center bg-slate-50"><div className="text-center text-sm text-red-600"><AlertCircle className="mx-auto mb-2"/>{fatal || 'ไม่พบบัญชีผู้ใช้'}</div></div>;
 
   return <main className="dashboard-app relative h-screen w-screen overflow-hidden bg-slate-200" style={dashboardStyle}>
-    <IncidentMap reports={reports} hotZones={analysis.hotZones} correlations={analysis.correlations} selectedId={selectedId} onSelect={selectReport} mapStyle={mapStyle} inspection={inspection} onInspect={inspectMapCoordinate} onCoordinateChange={setLiveCoordinate} onNotify={notify}/>
+    <IncidentMap reports={reports} hotZones={analysis.hotZones} correlations={analysis.correlations} watchAreas={watchAreas} role={user.role} selectedId={selectedId} onSelect={selectReport} mapStyle={mapStyle} inspection={inspection} onInspect={inspectMapCoordinate} onCoordinateChange={setLiveCoordinate} onCreateWatchArea={addWatchArea} onUpdateWatchArea={changeWatchArea} onNotify={notify}/>
     <Navbar user={user} settings={settings} search={search} searchLoading={searchLoading} liveCoordinate={liveCoordinate} unread={unread} mapStyle={mapStyle} onSearch={setSearch} onSearchSubmit={submitSmartSearch} onRefresh={refresh} onSettings={() => setSettingsOpen(true)} onPassword={() => setPasswordOpen(true)} onLogout={logout} onExport={() => setExportOpen(true)} onMapStyle={setMapStyle} onNotification={selectReport} onReadAll={readAll} onMobilePanel={() => setMobilePanelOpen(true)}/>
     {!historyMode && <IncidentInsights hotZones={analysis.hotZones} correlations={analysis.correlations} windowMinutes={analysisWindow} role={user.role} onWindowChange={setAnalysisWindow} onSelectReport={(id) => { void selectReportById(id); }} onDecision={(candidate, decision) => { void decideCorrelation(candidate, decision); }}/>} 
 

@@ -14,3 +14,6 @@ export interface HotZone { id: string; lat: number; lng: number; radiusM: number
 export type CorrelationDecision = 'CONFIRMED' | 'DISMISSED' | null;
 export interface CorrelationCandidate { id: string; reportA: ReportSummary; reportB: ReportSummary; score: number; timeMinutes: number; distanceM: number; reasons: string[]; decision: CorrelationDecision }
 export interface IncidentAnalysis { windowMinutes: 15 | 30 | 60; hotZones: HotZone[]; correlations: CorrelationCandidate[] }
+export type WatchAreaPriority = 'NORMAL' | 'IMPORTANT' | 'CRITICAL';
+export interface WatchArea { id: number; name: string; priority: WatchAreaPriority; center_lat: string | number; center_lng: string | number; radius_m: number; enabled: boolean | number; created_at?: string; updated_at?: string }
+export interface WatchAreaAlert { reportId: number; reportNo: string; areaId: number; areaName: string; priority: WatchAreaPriority }
